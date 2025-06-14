@@ -1,0 +1,75 @@
+// src/components/dashboard/ActivityLogFeed.tsx
+import React, { useState, useEffect } from 'react';
+import { db } from '@/lib/firebaseClient';
+import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
+import timeAgo from '@/lib/timeAgo';
+import Card from '@/components/ui/Card'; // ✅ சரிசெய்யப்பட்ட இறக்குமதி
+import { List, Activity, User, Clock } from 'lucide-react';
+
+interface ActivityLog {
+  id: string;
+  message: string;
+  user: string;
+  timestamp: any;
+}
+
+const ActivityLogFeed: React.FC = () => {
+  const [activities, setActivities] = useState<ActivityLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, "activity_logs"), orderBy("timestamp", "desc"), limit(15));
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const activitiesData: ActivityLog[] = [];
+      querySnapshot.forEach((doc) => {
+        activitiesData.push({ id: doc.id, ...doc.data() } as ActivityLog);
+      });
+      setActivities(activitiesData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <Card>
+        <div className="p-4 text-center">Loading Activities...</div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+        <div className="p-4 border-b dark:border-gray-700 flex items-center gap-2">
+            <List size={18} />
+            <h3 className="font-semibold">Live Team Activity</h3>
+        </div>
+        <div className="max-h-96 overflow-y-auto p-2">
+        {activities.length === 0 ? (
+          <p className="p-4 text-center text-gray-500">No recent activities.</p>
+        ) : (
+          <ul className="space-y-3">
+            {activities.map(activity => (
+              <li key={activity.id} className="flex items-start gap-3 p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded-full">
+                    <Activity size={16} className="text-gray-500"/>
+                </div>
+                <div className="flex-1">
+                    <p className="text-sm text-gray-800 dark:text-gray-200">{activity.message}</p>
+                    <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <div className="flex items-center gap-1.5"><User size={12}/> {activity.user}</div>
+                        <div className="flex items-center gap-1.5"><Clock size={12}/> {activity.timestamp ? timeAgo(activity.timestamp.toDate()) : 'just now'}</div>
+                    </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Card>
+  );
+};
+
+export default ActivityLogFeed;
