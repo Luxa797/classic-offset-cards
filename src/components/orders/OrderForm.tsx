@@ -1,5 +1,5 @@
 // src/components/orders/OrderForm.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
@@ -8,8 +8,12 @@ import Button from '../ui/Button';
 import CustomerSelect from '../CustomerSelect';
 import { supabase } from '@/lib/supabaseClient';
 import { useUser } from '@/context/UserContext';
-import { Loader2, AlertCircle, Plus } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { db } from '@/lib/firebaseClient';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { logActivity } from '@/lib/activityLogger';
+
 
 interface OrderFormProps {
     onSuccess: () => void;
@@ -29,7 +33,7 @@ interface Employee {
 }
 
 const OrderForm: React.FC<OrderFormProps> = ({ onSuccess }) => {
-    const { user } = useUser();
+    const { user, userProfile } = useUser();
     const [products, setProducts] = useState<Product[]>([]);
     const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
     const [designers, setDesigners] = useState<Employee[]>([]); 
@@ -127,7 +131,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ onSuccess }) => {
                 quantity: parseInt(formData.quantity),
                 rate: parseFloat(formData.rate),
                 total_amount: parseFloat(formData.totalAmount),
-                amount_received: parseFloat(formData.amountReceived || '0'), // இது orders டேபிளில் ஆரம்பப் பணத்தைப் பதிவு செய்யும்
+                amount_received: parseFloat(formData.amountReceived || '0'),
                 balance_amount: parseFloat(formData.totalAmount) - parseFloat(formData.amountReceived || '0'),
                 design_needed: formData.designNeeded === 'Yes',
                 designer_id: formData.designNeeded === 'Yes' ? formData.designerId || null : null,
@@ -142,21 +146,37 @@ const OrderForm: React.FC<OrderFormProps> = ({ onSuccess }) => {
             
             await supabase.from('order_status_log').insert({ order_id: newOrder.id, status: 'Pending', updated_by: user?.email });
 
-            // ✅ சரிசெய்யப்பட்டது: ஆரம்பப் பணம் payments டேபிளில் செருகப்படும்
             if (orderPayload.amount_received > 0) {
                 await supabase.from('payments').insert({
                     order_id: newOrder.id,
                     customer_id: orderPayload.customer_id,
                     amount_paid: orderPayload.amount_received,
-                    payment_date: orderPayload.date, // payment_date ஆக ஆர்டர் தேதியைப் பயன்படுத்துதல்
-                    payment_method: orderPayload.paymentMethod,
+                    payment_date: orderPayload.date,
+                    payment_method: orderPayload.payment_method, // FIX: Changed 'paymentMethod' to 'payment_method'
                     created_by: user.id,
-                    total_amount: orderPayload.total_amount, // payments டேபிளின் total_amount க்காக
-                    status: (orderPayload.amount_received >= orderPayload.total_amount) ? 'Paid' : 'Partial' // கட்டண நிலையை அமைக்கவும்
+                    total_amount: orderPayload.total_amount,
+                    status: (orderPayload.amount_received >= orderPayload.total_amount) ? 'Paid' : 'Partial'
                 });
             }
 
             toast.success(`✅ New order #${newOrder.id} created successfully!`);
+
+            const userName = userProfile?.name || 'Admin';
+            
+            // Log activity
+            const activityMessage = `New order #${newOrder.id} created for ${orderPayload.customer_name}.`;
+            await logActivity(activityMessage, userName);
+
+            // Create notification
+            await addDoc(collection(db, "notifications"), {
+                message: `New order #${newOrder.id} from ${orderPayload.customer_name} has been created.`,
+                type: 'order_created',
+                relatedId: newOrder.id,
+                timestamp: serverTimestamp(),
+                read: false,
+                triggeredBy: userName,
+            });
+
             onSuccess();
         } catch (err: any) {
             toast.error(err.message || "Failed to create order.");
@@ -224,7 +244,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ onSuccess }) => {
                     )}
                 </div>
                 <TextArea id="notes" label="Notes" value={formData.notes} onChange={handleInputChange} />
-                <Button type="submit" variant="primary" fullWidth disabled={loading}>
+                <Button type="submit" variant="primary" className="w-full" disabled={loading}>
                     {loading ? <Loader2 className="animate-spin" /> : 'Save Order'}
                 </Button>
             </form>

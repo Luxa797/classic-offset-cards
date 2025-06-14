@@ -9,6 +9,8 @@ import toast from 'react-hot-toast';
 import { useUser } from '@/context/UserContext';
 import CustomerTagging from './enhancements/CustomerTagging';
 import { logActivity } from '@/lib/activityLogger';
+import { db } from '@/lib/firebaseClient';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 // Define the shape of the customer object
 interface Customer {
@@ -123,28 +125,38 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ selectedCustomer, onSave, o
     };
 
     try {
-      let upsertError;
+      let customerId;
       if (selectedCustomer) {
         const { error } = await supabase
           .from('customers')
           .update(payload)
           .eq('id', selectedCustomer.id);
-        upsertError = error;
+        if (error) throw error;
       } else {
-        const { error } = await supabase.from('customers').insert(payload);
-        upsertError = error;
+        const { data, error } = await supabase.from('customers').insert(payload).select().single();
+        if (error || !data) throw error || new Error("Failed to create customer.");
+        customerId = data.id;
       }
-
-      if (upsertError) throw upsertError;
 
       toast.success(`✅ Customer ${selectedCustomer ? 'updated' : 'added'} successfully!`);
 
-      // Log activity
       const userName = userProfile?.name || 'Admin';
       const activityMessage = selectedCustomer
         ? `Updated details for customer "${payload.name}"`
         : `Added a new customer: "${payload.name}"`;
       await logActivity(activityMessage, userName);
+
+      // Create notification only for new customers
+      if (!selectedCustomer && customerId) {
+        await addDoc(collection(db, "notifications"), {
+            message: `New customer "${payload.name}" has been added.`,
+            type: 'customer_created',
+            relatedId: customerId,
+            timestamp: serverTimestamp(),
+            read: false,
+            triggeredBy: userName,
+        });
+      }
 
       onSave();
     } catch (err: any) {
