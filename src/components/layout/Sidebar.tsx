@@ -1,14 +1,12 @@
 // src/components/layout/Sidebar.tsx
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-// ✅ framer-motion-லிருந்து AnimatePresence மற்றும் motion-ஐ இறக்குமதி செய்யவும்
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, FileText, DollarSign, Package, Users, UserCircle,
   AlertCircle, ActivitySquare, FileSignature, Boxes, X,
-  Briefcase, BarChart3, ChevronDown, MessageCircle, Settings, MessageSquare
+  Briefcase, BarChart3, ChevronDown, MessageCircle, Settings, MessageSquare, Sparkles
 } from 'lucide-react';
-// import { useUser } from '@/context/UserContext';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -27,6 +25,7 @@ interface NavGroup {
   items: NavItem[];
 }
 
+// AI Agent-ஐ Communication பிரிவில் சேர்க்கவும்
 const navGroups: NavGroup[] = [
   {
     name: 'Overview',
@@ -66,6 +65,7 @@ const navGroups: NavGroup[] = [
     items: [
       { name: 'WhatsApp Dashboard', path: '/whatsapp', icon: <MessageCircle size={18} /> },
       { name: 'Team Chat', path: '/team-chat', icon: <MessageSquare size={18} /> },
+      { name: 'AI Agent', path: '/ai-agent', icon: <Sparkles size={18} /> }, // புதிய இணைப்பு
     ],
   },
 ];
@@ -110,8 +110,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 className={`transform transition-transform duration-200 ${expandedGroups.includes(group.name) ? 'rotate-180' : ''}`}
               />
             </button>
-
-            {/* ✅ AnimatePresence இங்கே பயன்படுத்தப்படுகிறது */}
             <AnimatePresence>
               {expandedGroups.includes(group.name) && (
                 <motion.div

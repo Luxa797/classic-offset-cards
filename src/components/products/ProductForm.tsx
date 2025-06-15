@@ -5,8 +5,8 @@ import Input from '../ui/Input';
 import Select from '../ui/Select';
 import TextArea from '../ui/TextArea';
 import Button from '../ui/Button';
-import { Loader2, AlertCircle } from 'lucide-react';
-import { Product } from './ProductMaster'; // ProductMaster-லிருந்து வகையைப் பெறுகிறோம்
+import { Loader2 } from 'lucide-react';
+import { Product } from './ProductMaster';
 
 interface ProductFormProps {
   editingProduct: Product | null;
@@ -48,10 +48,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProduct, onSave, onCan
         return;
     }
     onSave({
-        name: formData.name,
-        unit_price: parseFloat(formData.unit_price),
-        description: formData.description,
-        category: formData.category,
+        ...formData,
+        unit_price: parseFloat(formData.unit_price)
     });
   };
 
@@ -73,6 +71,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProduct, onSave, onCan
           <Input id="unit_price" label="Unit Price (₹) *" type="number" step="0.01" value={formData.unit_price} onChange={handleChange} required disabled={isLoading} />
           <Select id="category" label="Category *" value={formData.category} onChange={handleChange} options={categoryOptions} required disabled={isLoading} placeholder="Select a category" />
           <TextArea id="description" label="Description" value={formData.description} onChange={handleChange} disabled={isLoading} />
+          
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>Cancel</Button>
             <Button type="submit" variant="primary" disabled={isLoading}>

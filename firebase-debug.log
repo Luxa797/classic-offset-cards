@@ -1,0 +1,111 @@
+[debug] [2025-06-14T12:48:03.468Z] ----------------------------------------------------------------------
+[debug] [2025-06-14T12:48:03.471Z] Command:       /nix/store/rbdrkcs5kkwpalxcd7c6bnm33lk2955n-nodejs-20.19.0/bin/node /nix/store/nh3zwzkz6wh6qa7bd2ywzr7irjij7j1i-firebase-tools-14.3.1/lib/node_modules/firebase-tools/lib/bin/firebase.js init hosting
+[debug] [2025-06-14T12:48:03.472Z] CLI Version:   14.3.1
+[debug] [2025-06-14T12:48:03.472Z] Platform:      linux
+[debug] [2025-06-14T12:48:03.472Z] Node Version:  v20.19.0
+[debug] [2025-06-14T12:48:03.472Z] Time:          Sat Jun 14 2025 12:48:03 GMT+0000 (Coordinated Universal Time)
+[debug] [2025-06-14T12:48:03.473Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-06-14T12:48:03.480Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-14T12:48:03.480Z] > authorizing via signed-in user (mk.lukman@gmail.com)
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  /home/user/classic-offset
+
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] but for now we'll just set up a default project.
+[info] 
+[debug] [2025-06-14T12:48:09.168Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:09.169Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:09.170Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-14T12:48:09.170Z] > authorizing via signed-in user (mk.lukman@gmail.com)
+[debug] [2025-06-14T12:48:09.189Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/availableProjects pageSize=100
+[debug] [2025-06-14T12:48:09.719Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/availableProjects 200
+[debug] [2025-06-14T12:48:09.719Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/availableProjects [omitted]
+[debug] [2025-06-14T12:48:29.250Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:29.251Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:29.251Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-14T12:48:29.251Z] > authorizing via signed-in user (mk.lukman@gmail.com)
+[debug] [2025-06-14T12:48:29.252Z] >>> [apiv2][query] POST https://firebase.googleapis.com/v1beta1/projects/gen-lang-client-0997985400:addFirebase [none]
+[debug] [2025-06-14T12:48:31.151Z] <<< [apiv2][status] POST https://firebase.googleapis.com/v1beta1/projects/gen-lang-client-0997985400:addFirebase 200
+[debug] [2025-06-14T12:48:31.152Z] <<< [apiv2][body] POST https://firebase.googleapis.com/v1beta1/projects/gen-lang-client-0997985400:addFirebase {"name":"operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3"}
+[debug] [2025-06-14T12:48:31.155Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:31.155Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:31.155Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-14T12:48:31.156Z] > authorizing via signed-in user (mk.lukman@gmail.com)
+[debug] [2025-06-14T12:48:31.156Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 [none]
+[debug] [2025-06-14T12:48:35.541Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 200
+[debug] [2025-06-14T12:48:35.542Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 {"name":"operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3"}
+[debug] [2025-06-14T12:48:36.105Z] [Add Firebase Poller] Retrying task index 0
+[debug] [2025-06-14T12:48:36.108Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:36.108Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:36.109Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-14T12:48:36.109Z] > authorizing via signed-in user (mk.lukman@gmail.com)
+[debug] [2025-06-14T12:48:36.109Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 [none]
+[debug] [2025-06-14T12:48:36.444Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 200
+[debug] [2025-06-14T12:48:36.444Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 {"name":"operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3"}
+[debug] [2025-06-14T12:48:37.444Z] [Add Firebase Poller] Retrying task index 0
+[debug] [2025-06-14T12:48:37.445Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:37.445Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:37.445Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-14T12:48:37.446Z] > authorizing via signed-in user (mk.lukman@gmail.com)
+[debug] [2025-06-14T12:48:37.446Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 [none]
+[debug] [2025-06-14T12:48:37.789Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 200
+[debug] [2025-06-14T12:48:37.789Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 {"name":"operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3"}
+[debug] [2025-06-14T12:48:39.793Z] [Add Firebase Poller] Retrying task index 0
+[debug] [2025-06-14T12:48:39.794Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:39.794Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:39.794Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-14T12:48:39.794Z] > authorizing via signed-in user (mk.lukman@gmail.com)
+[debug] [2025-06-14T12:48:39.795Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 [none]
+[debug] [2025-06-14T12:48:40.092Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 200
+[debug] [2025-06-14T12:48:40.092Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 {"name":"operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3"}
+[debug] [2025-06-14T12:48:44.093Z] [Add Firebase Poller] Retrying task index 0
+[debug] [2025-06-14T12:48:44.094Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:44.095Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:44.095Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-14T12:48:44.095Z] > authorizing via signed-in user (mk.lukman@gmail.com)
+[debug] [2025-06-14T12:48:44.096Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 [none]
+[debug] [2025-06-14T12:48:44.398Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 200
+[debug] [2025-06-14T12:48:44.399Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3 {"name":"operations/workflows/MzUzODgxNzktMGU2ZS00MzI5LWFjMjYtYWJjYTUxZGU0ODE3","done":true,"response":{"@type":"type.googleapis.com/google.firebase.service.v1beta1.FirebaseProject","projectId":"gen-lang-client-0997985400","projectNumber":"153035808866","displayName":"Gemini API","name":"projects/gen-lang-client-0997985400","resources":{"hostingSite":"gen-lang-client-0997985400"}}}
+[info] 
+[info] 🎉🎉🎉 Your Firebase project is ready! 🎉🎉🎉
+[info] 
+[info] Project information:
+[info]    - Project ID: gen-lang-client-0997985400
+[info]    - Project Name: Gemini API
+[info] 
+[info] Firebase console is available at
+[info] https://console.firebase.google.com/project/gen-lang-client-0997985400/overview
+[info] i  Using project gen-lang-client-0997985400 (Gemini API) 
+[info] 
+=== Hosting Setup
+[debug] [2025-06-14T12:48:44.421Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:44.422Z] No OAuth tokens found
+[debug] [2025-06-14T12:48:44.422Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-14T12:48:44.423Z] > authorizing via signed-in user (mk.lukman@gmail.com)
+[debug] [2025-06-14T12:48:44.423Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/gen-lang-client-0997985400 [none]
+[debug] [2025-06-14T12:48:44.640Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/gen-lang-client-0997985400 200
+[debug] [2025-06-14T12:48:44.640Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/gen-lang-client-0997985400 {"projectId":"gen-lang-client-0997985400","projectNumber":"153035808866","displayName":"Gemini API","name":"projects/gen-lang-client-0997985400","resources":{"hostingSite":"gen-lang-client-0997985400"},"state":"ACTIVE","etag":"1_297f6d88-ceea-439a-bc45-fed35021b8ef"}
+[debug] [2025-06-14T12:51:58.436Z] Error: spawnSync /bin/sh ENOENT
+    at Object.spawnSync (node:internal/child_process:1123:20)
+    at spawnSync (node:child_process:877:24)
+    at execSync (node:child_process:958:15)
+    at init (/nix/store/nh3zwzkz6wh6qa7bd2ywzr7irjij7j1i-firebase-tools-14.3.1/lib/node_modules/firebase-tools/lib/frameworks/vite/index.js:32:34)
+    at async Object.init (/nix/store/nh3zwzkz6wh6qa7bd2ywzr7irjij7j1i-firebase-tools-14.3.1/lib/node_modules/firebase-tools/lib/frameworks/vite/index.js:17:65)
+    at async doSetup (/nix/store/nh3zwzkz6wh6qa7bd2ywzr7irjij7j1i-firebase-tools-14.3.1/lib/node_modules/firebase-tools/lib/init/features/hosting/index.js:108:13)
+    at async init (/nix/store/nh3zwzkz6wh6qa7bd2ywzr7irjij7j1i-firebase-tools-14.3.1/lib/node_modules/firebase-tools/lib/init/index.js:41:9)
+    at async Command.initAction [as actionFn] (/nix/store/nh3zwzkz6wh6qa7bd2ywzr7irjij7j1i-firebase-tools-14.3.1/lib/node_modules/firebase-tools/lib/commands/init.js:187:5)
+[error] 
+[error] Error: An unexpected error has occurred.

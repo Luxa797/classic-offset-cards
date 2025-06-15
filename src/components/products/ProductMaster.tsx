@@ -2,12 +2,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ProductForm from './ProductForm';
 import ProductTable from './ProductTable';
-import ProductViewModal from './ProductViewModal'; // View Modal-ஐ இறக்குமதி செய்யவும்
-import ConfirmationModal from '../ui/ConfirmationModal'; // உறுதிப்படுத்தல் Modal-ஐ இறக்குமதி செய்யவும்
+import ProductViewModal from './ProductViewModal';
+import ConfirmationModal from '../ui/ConfirmationModal';
 import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
 
-// இந்த பக்கத்திற்கு மட்டும் பொதுவான Product வகை
 export interface Product {
   id: number;
   name: string;
@@ -65,7 +64,7 @@ const ProductMaster: React.FC = () => {
       setEditingProduct(null);
       fetchProducts();
     } catch (err) {
-      // Toast ஏற்கெனவே பிழையைக் காட்டிவிடும்
+      // Toast already handles the error
     } finally {
       setFormLoading(false);
     }
@@ -95,7 +94,7 @@ const ProductMaster: React.FC = () => {
         await promise;
         fetchProducts();
     } catch (err) {
-      // Toast ஏற்கெனவே பிழையைக் காட்டிவிடும்
+      // Toast already handles the error
     } finally {
         setFormLoading(false);
         setProductToDelete(null);

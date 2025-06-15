@@ -31,10 +31,9 @@ import ShowcasePage from './components/showcase/ShowcasePage';
 import WhatsAppDashboard from './components/WhatsAppDashboard';
 import NotFoundPage from './pages/NotFoundPage';
 import SettingsPage from './components/settings/SettingsPage';
-import TeamChatPage from './pages/TeamChatPage'; // Import the new chat page
-
-// NEW: Import AdminContentManagement page
+import TeamChatPage from './pages/TeamChatPage';
 import AdminContentManagement from './pages/AdminContentManagement';
+import AIAgentPage from './pages/AIAgentPage'; // AI Agent பக்கத்தை இறக்குமதி செய்யவும்
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -61,9 +60,8 @@ const router = createBrowserRouter(
         <Route path="/showcase" element={<ShowcasePage />} />
         <Route path="/whatsapp" element={<WhatsAppDashboard />} />
         <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/team-chat" element={<TeamChatPage />} /> {/* Add the new chat route */}
-
-        {/* NEW: Admin Content Management Route */}
+        <Route path="/team-chat" element={<TeamChatPage />} />
+        <Route path="/ai-agent" element={<AIAgentPage />} /> {/* புதிய பாதையைச் சேர்க்கவும் */}
         <Route path="/admin/content" element={<AdminContentManagement />} />
       </Route>
 

@@ -1,6 +1,6 @@
 import React from 'react';
-import Modal from '../ui/Modal'; // உங்கள் Modal கூறின் பாதை
-import { Product } from './ProductMaster'; // ProductMaster-லிருந்து வகையைப் பெறவும்
+import Modal from '../ui/Modal';
+import { Product } from './ProductMaster';
 import { Tag, DollarSign, AlignLeft } from 'lucide-react';
 
 interface ProductViewModalProps {
