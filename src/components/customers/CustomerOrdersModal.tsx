@@ -13,7 +13,7 @@ interface Order {
   quantity: number;
   total_amount: number;
   status?: string;
-  date: string;
+  created_at: string; // Changed from 'date' to 'created_at'
 }
 
 interface CustomerOrdersModalProps {
@@ -59,7 +59,7 @@ const CustomerOrdersModal: React.FC<CustomerOrdersModalProps> = ({ customerId, c
                 quantity: order.quantity,
                 total_amount: order.total_amount,
                 status: statusData?.[0]?.status || 'N/A',
-                date: order.created_at
+                created_at: order.created_at
               };
             })
           );
@@ -127,7 +127,7 @@ const CustomerOrdersModal: React.FC<CustomerOrdersModalProps> = ({ customerId, c
                       {order.status || 'N/A'}
                     </span>
                   </td>
-                  <td className="px-4 py-2">{new Date(order.date).toLocaleDateString('en-GB')}</td>
+                  <td className="px-4 py-2">{new Date(order.created_at).toLocaleDateString('en-GB')}</td>
                   <td className="px-4 py-2 text-right">
                     <Link to={`/invoices/${order.order_id}`}>
                       <Button variant="link" size="sm">View Invoice</Button>

@@ -10,7 +10,7 @@ interface Order {
   order_id: number;
   total_amount: number;
   status?: string;
-  date: string;
+  created_at: string; // Changed from 'date' to 'created_at'
 }
 
 // Payments டேபிளிலிருந்து வரும் தரவிற்கான வகை
@@ -56,12 +56,30 @@ const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({ customerId,
       if (activeTab === 'orders') {
         const { data, error: fetchError } = await supabase
           .from('order_summary_with_dues')
-          .select('order_id, total_amount, status, date')
+          .select('order_id, total_amount, created_at') // Changed 'date' to 'created_at'
           .eq('customer_id', customerId)
-          .order('date', { ascending: false });
+          .order('created_at', { ascending: false }); // Changed 'date' to 'created_at'
 
         if (fetchError) throw fetchError;
-        setOrders(data || []);
+        
+        // Get status for each order
+        const ordersWithStatus = await Promise.all(
+          (data || []).map(async (order) => {
+            const { data: statusData } = await supabase
+              .from('order_status_log')
+              .select('status')
+              .eq('order_id', order.order_id)
+              .order('updated_at', { ascending: false })
+              .limit(1);
+              
+            return {
+              ...order,
+              status: statusData?.[0]?.status || 'N/A',
+            };
+          })
+        );
+        
+        setOrders(ordersWithStatus);
       } else if (activeTab === 'payments') {
         const { data, error: fetchError } = await supabase
           .from('payments')
@@ -146,7 +164,7 @@ const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({ customerId,
                         {order.status || 'N/A'}
                       </span>
                     </td>
-                    <td className="px-4 py-2">{new Date(order.date).toLocaleDateString('en-GB')}</td>
+                    <td className="px-4 py-2">{new Date(order.created_at).toLocaleDateString('en-GB')}</td>
                     <td className="px-4 py-2 text-right">
                       <Link to={`/invoices/${order.order_id}`}>
                         <Button variant="link" size="sm">View Invoice</Button>

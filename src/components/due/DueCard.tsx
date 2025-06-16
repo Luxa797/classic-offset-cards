@@ -38,8 +38,8 @@ const DueCard: React.FC<Props> = ({ customer, orders }) => {
                 <span className="font-semibold text-gray-700 dark:text-gray-200">
                   ₹{order.balance_due.toLocaleString('en-IN')}
                 </span>
-                {/* DueAlertBadge-க்கு date புலத்தை அனுப்பவும் */}
-                <DueAlertBadge deliveryDate={order.date} />
+                {/* DueAlertBadge-க்கு created_at புலத்தை அனுப்பவும் */}
+                <DueAlertBadge deliveryDate={order.created_at} />
               </div>
             </li>
           ))}
