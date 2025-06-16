@@ -5,7 +5,7 @@ import { useUser } from '@/context/UserContext';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Frown } from 'lucide-react';
 
-// துணைக்கூறுகளை இறக்குமதி செய்யவும்
+// Import sub-components
 import DashboardMetrics from './DashboardMetrics'; 
 import RevenueChart from './RevenueChart';
 import OrderStatusCard from './OrderStatusCard';
@@ -14,7 +14,7 @@ import FinancialSummary from './summary/FinancialSummary';
 import ActivityLogFeed from './ActivityLogFeed';
 import Card from '../ui/Card';
 
-// தரவுகளுக்கான வகைகள்
+// Data types
 interface RevenueChartDataPoint { date: string; value: number; }
 interface OrdersChartDataPoint { day: string; order_count: number; }
 interface PendingOrder { id: number; customer_name: string; date: string; status: string; order_id: string; }
@@ -61,6 +61,7 @@ const Dashboard: React.FC = () => {
       const fromDateForRevenue = new Date(month);
       fromDateForRevenue.setDate(1);
 
+      // Fetch all data in parallel
       const [
         pendingOrdersResponse,
         dailyOrdersResponse,
@@ -71,22 +72,38 @@ const Dashboard: React.FC = () => {
       ] = await Promise.all([
         supabase.rpc('get_recent_pending_orders'),
         supabase.rpc('get_daily_order_counts', { days_to_check: 7 }),
-        supabase.rpc('get_financial_summary', { month: month }),
-        supabase.rpc('get_financial_summary', { month: previousMonth }),
+        // Corrected parameter name from 'month' to 'p_month'
+        supabase.rpc('get_financial_summary', { p_month: month }),
+        supabase.rpc('get_financial_summary', { p_month: previousMonth }),
         supabase.from('order_summary_with_dues').select('total_amount, date').gte('date', fromDateForRevenue.toISOString()),
         supabase.rpc('get_dashboard_metrics'),
       ]);
 
-      const errors = [
-        pendingOrdersResponse.error, 
-        dailyOrdersResponse.error, 
-        currentMonthSummaryResponse.error, 
-        previousMonthSummaryResponse.error, 
-        revenueResponse.error,
-        consolidatedMetricsResponse.error 
-      ].filter(Boolean);
-      if (errors.length > 0) throw new Error(errors.map(e => e.message).join(', '));
+      // Corrected Error Handling
+      const responses = {
+        pendingOrders: pendingOrdersResponse,
+        dailyOrders: dailyOrdersResponse,
+        currentMonthSummary: currentMonthSummaryResponse,
+        previousMonthSummary: previousMonthSummaryResponse,
+        revenue: revenueResponse,
+        consolidatedMetrics: consolidatedMetricsResponse,
+      };
 
+      const errorMessages: string[] = [];
+      for (const key in responses) {
+        // @ts-ignore
+        if (responses[key].error) {
+          // @ts-ignore
+          const errorMessage = `[${key}]: ${responses[key].error.message}`;
+          console.error(`Error fetching ${key}:`, responses[key].error);
+          errorMessages.push(errorMessage);
+        }
+      }
+
+      if (errorMessages.length > 0) {
+        throw new Error(`One or more dashboard components failed to load. Check the console for details.`);
+      }
+      // --- End of Corrected Error Handling ---
 
       const financialData = currentMonthSummaryResponse.data?.[0];
       const prevFinancialData = previousMonthSummaryResponse.data?.[0];
@@ -110,8 +127,8 @@ const Dashboard: React.FC = () => {
       });
 
     } catch (err: any) {
-      console.error("Error fetching dashboard data:", err);
-      setError(err.message || "Failed to load dashboard data.");
+      console.error("Detailed error in fetchDashboardData:", err);
+      setError(err.message || "An unknown error occurred while loading dashboard data.");
     } finally {
       setLoading(false);
     }
@@ -142,7 +159,7 @@ const Dashboard: React.FC = () => {
   
   if (error) {
     return (
-        <Card className="m-4 p-6 text-center text-red-600 bg-red-50 dark:bg-red-900/30"><AlertTriangle className="mx-auto h-12 w-12" /><h3 className="mt-2 text-lg font-medium">Something went wrong</h3><p className="mt-1 text-sm">{error}</p></Card>
+        <Card className="m-4 p-6 text-center text-red-600 bg-red-50 dark:bg-red-900/30"><AlertTriangle className="mx-auto h-12 w-12" /><h3 className="mt-2 text-lg font-medium">Something went wrong</h3><p className="mt-1 text-sm whitespace-pre-line">{error}</p></Card>
     );
   }
   
