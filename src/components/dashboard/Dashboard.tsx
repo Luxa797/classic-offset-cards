@@ -72,14 +72,12 @@ const Dashboard: React.FC = () => {
       ] = await Promise.all([
         supabase.rpc('get_recent_pending_orders'),
         supabase.rpc('get_daily_order_counts', { days_to_check: 7 }),
-        // Corrected parameter name from 'month' to 'p_month'
         supabase.rpc('get_financial_summary', { p_month: month }),
         supabase.rpc('get_financial_summary', { p_month: previousMonth }),
         supabase.from('order_summary_with_dues').select('total_amount, date').gte('date', fromDateForRevenue.toISOString()),
         supabase.rpc('get_dashboard_metrics'),
       ]);
 
-      // Corrected Error Handling
       const responses = {
         pendingOrders: pendingOrdersResponse,
         dailyOrders: dailyOrdersResponse,
@@ -94,16 +92,16 @@ const Dashboard: React.FC = () => {
         // @ts-ignore
         if (responses[key].error) {
           // @ts-ignore
-          const errorMessage = `[${key}]: ${responses[key].error.message}`;
-          console.error(`Error fetching ${key}:`, responses[key].error);
-          errorMessages.push(errorMessage);
+          const errorMessage = `Error fetching ${key}: ${responses[key].error.message}`;
+          console.error(errorMessage);
+          errorMessages.push(`• ${errorMessage}`);
         }
       }
 
       if (errorMessages.length > 0) {
-        throw new Error(`One or more dashboard components failed to load. Check the console for details.`);
+        // ✅ FINAL FIX: Join with a simple comma and space to avoid syntax errors.
+        throw new Error(errorMessages.join(', '));
       }
-      // --- End of Corrected Error Handling ---
 
       const financialData = currentMonthSummaryResponse.data?.[0];
       const prevFinancialData = previousMonthSummaryResponse.data?.[0];

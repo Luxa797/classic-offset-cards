@@ -1,19 +1,19 @@
 // src/components/customers/CustomerOrdersModal.tsx
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import Modal from '../ui/Modal'; // உங்கள் Modal கூறின் பாதை
+import Modal from '../ui/Modal'; // The path to your Modal component
 import { Loader2, AlertTriangle, FileX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Button from '../ui/Button';
 
-// View-லிருந்து வரும் தரவிற்கான வகை
+// Type for the data coming from the view
 interface Order {
   order_id: number;
   order_type: string;
   quantity: number;
   total_amount: number;
   status?: string;
-  created_at: string; // Changed from 'date' to 'created_at'
+  date: string;
 }
 
 interface CustomerOrdersModalProps {
@@ -34,7 +34,7 @@ const CustomerOrdersModal: React.FC<CustomerOrdersModalProps> = ({ customerId, c
         setLoading(true);
         setError(null);
         try {
-          // ✅ முக்கிய மாற்றம்: orders table-லிருந்து நேரடியாக தரவை பெறுகிறோம்
+          // Fetch base order data
           const { data: ordersData, error: ordersError } = await supabase
             .from('orders')
             .select('id, order_type, quantity, total_amount, created_at')
@@ -43,23 +43,28 @@ const CustomerOrdersModal: React.FC<CustomerOrdersModalProps> = ({ customerId, c
 
           if (ordersError) throw ordersError;
 
-          // ஒவ்வொரு order-க்கும் latest status-ஐ பெறுகிறோம்
+          // Fetch the latest status for each order
           const ordersWithStatus = await Promise.all(
             (ordersData || []).map(async (order) => {
-              const { data: statusData } = await supabase
+              const { data: statusData, error: statusError } = await supabase
                 .from('order_status_log')
                 .select('status')
                 .eq('order_id', order.id)
-                .order('updated_at', { ascending: false })
-                .limit(1);
+                .order('created_at', { ascending: false }) // Note: using created_at as updated_at doesn't exist
+                .limit(1)
+                .single();
+
+              if (statusError && statusError.code !== 'PGRST116') { // Ignore 'exact one row' error for orders with no status
+                console.error(`Error fetching status for order ${order.id}:`, statusError);
+              }
 
               return {
                 order_id: order.id,
                 order_type: order.order_type,
                 quantity: order.quantity,
                 total_amount: order.total_amount,
-                status: statusData?.[0]?.status || 'N/A',
-                created_at: order.created_at
+                status: statusData?.status || 'Pending', // Default to 'Pending' if no status found
+                date: order.created_at
               };
             })
           );
@@ -67,7 +72,8 @@ const CustomerOrdersModal: React.FC<CustomerOrdersModalProps> = ({ customerId, c
           setOrders(ordersWithStatus);
         } catch (err: any) {
             console.error('Error fetching orders for customer:', err);
-            setError(err.message || 'Could not load orders.');
+            // ✅ FIX: Use err.message to display a meaningful error string
+            setError(err.message || 'An unknown error occurred while fetching orders.');
         } finally {
             setLoading(false);
         }
@@ -81,7 +87,7 @@ const CustomerOrdersModal: React.FC<CustomerOrdersModalProps> = ({ customerId, c
       isOpen={isOpen}
       onClose={onClose}
       title={`🧾 Orders for ${customerName}`}
-      size="2xl" // Modal-ஐ சற்று பெரிதாக்கலாம்
+      size="2xl"
     >
       {loading ? (
         <div className="flex justify-center items-center py-10">
@@ -90,6 +96,7 @@ const CustomerOrdersModal: React.FC<CustomerOrdersModalProps> = ({ customerId, c
       ) : error ? (
         <div className="py-10 text-center text-red-600">
           <AlertTriangle className="mx-auto h-8 w-8 mb-2" />
+          {/* This will now display the actual error message */}
           <p>{error}</p>
         </div>
       ) : orders.length === 0 ? (
@@ -120,14 +127,14 @@ const CustomerOrdersModal: React.FC<CustomerOrdersModalProps> = ({ customerId, c
                   <td className="px-4 py-2">₹{order.total_amount.toLocaleString('en-IN')}</td>
                   <td className="px-4 py-2">
                     <span className={`px-2 py-1 text-xs rounded-full font-medium
-                      ${order.status === 'Delivered' ? 'bg-green-100 text-green-700' : 
+                      ${order.status === 'Delivered' || order.status === 'Completed' ? 'bg-green-100 text-green-700' : 
                        order.status === 'Printing' ? 'bg-blue-100 text-blue-700' :
-                       order.status === 'Design' ? 'bg-yellow-100 text-yellow-700' :
-                       'bg-red-100 text-red-700'}`}>
-                      {order.status || 'N/A'}
+                       order.status === 'Designing' ? 'bg-yellow-100 text-yellow-700' :
+                       'bg-gray-100 text-gray-700'}`}>
+                      {order.status}
                     </span>
                   </td>
-                  <td className="px-4 py-2">{new Date(order.created_at).toLocaleDateString('en-GB')}</td>
+                  <td className="px-4 py-2">{new Date(order.date).toLocaleDateString('en-GB')}</td>
                   <td className="px-4 py-2 text-right">
                     <Link to={`/invoices/${order.order_id}`}>
                       <Button variant="link" size="sm">View Invoice</Button>

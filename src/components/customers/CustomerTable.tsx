@@ -119,6 +119,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onAdd, onEdit, onDataChan
       setShowDeleteModal(false);
       setCustomerToDelete(null);
     } catch (err: any) {
+      // ✅ FIX: Use err.message to display a meaningful error string
       toast.error(`Failed to delete customer: ${err.message}`);
     } finally {
       setLoading(false);
