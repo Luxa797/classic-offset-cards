@@ -12,7 +12,7 @@ export interface DueOrder {
   order_id: number;
   customer_name: string;
   balance_due: number;
-  created_at: string | null; // Changed from 'date' to 'created_at'
+  date: string | null; // Changed from 'created_at' to 'date'
   // Add other columns from order_summary_with_dues if needed in DueSummary
   amount_paid?: number; // Added for consistency, though not directly used for summary stats here
   total_amount?: number; // Added for consistency

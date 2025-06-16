@@ -10,7 +10,7 @@ interface Order {
   order_id: number;
   total_amount: number;
   status?: string;
-  created_at: string; // Changed from 'date' to 'created_at'
+  date: string; // Changed from 'created_at' to 'date'
 }
 
 // Payments டேபிளிலிருந்து வரும் தரவிற்கான வகை
@@ -56,9 +56,9 @@ const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({ customerId,
       if (activeTab === 'orders') {
         const { data, error: fetchError } = await supabase
           .from('order_summary_with_dues')
-          .select('order_id, total_amount, created_at') // Changed 'date' to 'created_at'
+          .select('order_id, total_amount, date') // Changed 'created_at' to 'date'
           .eq('customer_id', customerId)
-          .order('created_at', { ascending: false }); // Changed 'date' to 'created_at'
+          .order('date', { ascending: false }); // Changed 'created_at' to 'date'
 
         if (fetchError) throw fetchError;
         
@@ -164,7 +164,7 @@ const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({ customerId,
                         {order.status || 'N/A'}
                       </span>
                     </td>
-                    <td className="px-4 py-2">{new Date(order.created_at).toLocaleDateString('en-GB')}</td>
+                    <td className="px-4 py-2">{new Date(order.date).toLocaleDateString('en-GB')}</td>
                     <td className="px-4 py-2 text-right">
                       <Link to={`/invoices/${order.order_id}`}>
                         <Button variant="link" size="sm">View Invoice</Button>
