@@ -21,9 +21,30 @@ const stabilityApiKey = Deno.env.get("STABILITY_API_KEY");
 const safetySettings = [ { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE }, { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE }, { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE }, { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE } ];
 
 // --- SYSTEM INSTRUCTIONS ---
-const classicSystemInstruction = { role: "system", parts: [{ text: "You are an expert assistant for 'Classic Offset'. Use available tools for internal data queries. If a user asks in Tamil, you MUST respond in Tamil." }]};
-// --- FINAL, STRICTER INSTRUCTION FOR IMAGE AGENT ---
-const imageCreatorSystemInstruction = { role: "system", parts: [{ text: "You are an image generation assistant. Use the 'createImage' tool. When you receive the image data from the tool, your final answer MUST be ONLY the image data string (e.g., 'data:image/png;base64,...') and nothing else. Do not add any other text, greetings, or explanations." }]};
+// --- RESTORED DETAILED INSTRUCTIONS FOR CLASSIC AGENT ---
+const classicSystemInstruction = { 
+  role: "system", 
+  parts: [{ text: `
+    You are an expert assistant for a printing press shop named 'Classic Offset'. 
+    Your primary goal is to help the user by answering their questions using the available tools.
+    You must follow these rules strictly:
+    
+    RULE 1: If a user asks for details like orders or payments using a customer's NAME, 
+    but the required tool needs a customer_id, you MUST follow this two-step process:
+    1. First, use the 'getCustomerDetails' tool to find the customer's ID using their name.
+    2. Then, once you have the customer_id, use the appropriate tool (like getOrdersForCustomer or getPaymentsForCustomer) to fulfill the original request.
+    
+    RULE 2: If a user provides an ORDER NUMBER and asks for related details (like payment or customer info),
+    you MUST follow this two-step process:
+    1. First, use the 'getSingleOrderDetails' tool with the provided order number. This tool will give you the 'customer_id'.
+    2. Then, use that 'customer_id' to call other tools to get the extra information requested.
+    
+    Do not ask the user for the ID; find it yourself. If you find multiple customers with the same name, ask the user for clarification.
+    
+    RULE 3: If the user asks a question in Tamil, you MUST respond in Tamil.
+  ` }]
+};
+const imageCreatorSystemInstruction = { role: "system", parts: [{ text: "You are an image generation assistant. Use the 'createImage' tool. When you get the image data back from the tool, just say 'Here is the image you requested:' followed by the data." }]};
 
 // --- TOOLS DEFINITION ---
 const classicTools = [{ functionDeclarations: [ { name: "getCustomerDetails", description: "Get customer details by name.", parameters: { type: "OBJECT", properties: { "customer_name": { type: "STRING" } }, required: ["customer_name"] } }, { name: "getSingleOrderDetails", description: "Get single order details by order ID.", parameters: { type: "OBJECT", properties: { "order_id": { type: "NUMBER" } }, required: ["order_id"] } }, { name: "getOrdersForCustomer", description: "Get all orders for a customer by ID.", parameters: { type: "OBJECT", properties: { "customer_id": { type: "STRING" } }, required: ["customer_id"] } }, { name: "getPaymentsForCustomer", description: "Get all payments for a customer by ID.", parameters: { type: "OBJECT", properties: { "customer_id": { type: "STRING" } }, required: ["customer_id"] } }, { name: "getFinancialSummary", description: "Get financial summary for a month (YYYY-MM-DD).", parameters: { type: "OBJECT", properties: { "month": { type: "STRING" } }, required: ["month"] } }, { name: "getRecentDuePayments", description: "Get recent due payments.", parameters: { type: "OBJECT", properties: {} } }, { name: "getLowStockMaterials", description: "Get low stock materials.", parameters: { type: "OBJECT", properties: {} } }, { name: "getTopSpendingCustomers", description: "Get top spending customers.", parameters: { type: "OBJECT", properties: { "limit": { type: "NUMBER" } }, required: ["limit"] } }, { name: "getEmployeePerformance", description: "Get employee performance by name.", parameters: { type: "OBJECT", properties: { "employee_name": { type: "STRING" } }, required: ["employee_name"] } }, { name: "getBestSellingProducts", description: "Get best selling products.", parameters: { type: "OBJECT", properties: { "limit": { type: "NUMBER" } }, required: ["limit"] } }, { name: "createNewCustomer", description: "Create a new customer.", parameters: { type: "OBJECT", properties: { "name": { type: "STRING" }, "phone": { type: "STRING" }, "address": { type: "STRING" } }, required: ["name", "phone"] } }, { name: "logNewExpense", description: "Log a new expense.", parameters: { type: "OBJECT", properties: { "expense_type": { type: "STRING" }, "amount": { type: "NUMBER" }, "paid_to": { type: "STRING" } }, required: ["expense_type", "amount", "paid_to"] } } ] }];
@@ -40,7 +61,6 @@ async function performPerplexitySearch(query: string): Promise<string> {
     } catch (error) { return `Failed to connect to Perplexity API: ${error.message}`; }
 }
 
-// --- FINAL ROBUST Image Generation Function ---
 async function generateStableImage(prompt: string): Promise<string> {
     if (!stabilityApiKey) {
         return "பிழை: STABILITY_API_KEY சேமிக்கப்படவில்லை. தயவுசெய்து Supabase திட்டத்தின் Secrets பகுதியில் உங்கள் API சாவியைச் சேர்க்கவும்.";
@@ -60,7 +80,6 @@ async function generateStableImage(prompt: string): Promise<string> {
         }
         const responseJSON = await response.json();
         const imageBase64 = responseJSON.artifacts[0].base64;
-        // Return *only* the data string.
         return `data:image/png;base64,${imageBase64}`;
     } catch (error) {
         console.error("Fetch to Stability AI failed:", error);
