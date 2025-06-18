@@ -21,34 +21,66 @@ const stabilityApiKey = Deno.env.get("STABILITY_API_KEY");
 const safetySettings = [ { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE }, { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE }, { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE }, { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE } ];
 
 // --- SYSTEM INSTRUCTIONS ---
-// --- RESTORED DETAILED INSTRUCTIONS FOR CLASSIC AGENT ---
 const classicSystemInstruction = { 
   role: "system", 
   parts: [{ text: `
-    You are an expert assistant for a printing press shop named 'Classic Offset'. 
-    Your primary goal is to help the user by answering their questions using the available tools.
-    You must follow these rules strictly:
+    You are 'Classic AI', an expert business analyst and assistant for 'Classic Offset', a printing press.
+    You must follow these rules strictly and in this exact order:
+
+    LAW 1 (UNBREAKABLE): Before doing ANYTHING else, check if the user's query is time-related (e.g., "last week", "this month", "today"). If it is, your first and only action MUST be to call the 'performWebSearch' tool with the exact query: "What is today's date?". Get this date first, then proceed to the next rules. DO NOT, under any circumstances, ask the user for the date.
+
+    LAW 2 (TOOL SELECTION): Once you have the date (if needed), choose the MOST specific tool for the user's request.
+    - To 'list' or 'show' new customers, you MUST use 'listNewCustomers'.
+    - For a 'count' of new customers, you MUST use 'getNewCustomerCount'.
+    - For a 'financial report' (revenue, profit), you MUST use 'getFinancialReport'.
+
+    LAW 3 (CONTEXT AWARENESS): You MUST remember information from previous turns in the conversation. If you have found a 'customer_id', you must reuse it. DO NOT ask for it again.
+
+    LAW 4 (TOOL CHAINING): If a tool needs an ID you don't have, use another tool to find it first (e.g., 'getCustomerDetails' to get an ID from a name).
     
-    RULE 1: If a user asks for details like orders or payments using a customer's NAME, 
-    but the required tool needs a customer_id, you MUST follow this two-step process:
-    1. First, use the 'getCustomerDetails' tool to find the customer's ID using their name.
-    2. Then, once you have the customer_id, use the appropriate tool (like getOrdersForCustomer or getPaymentsForCustomer) to fulfill the original request.
+    LAW 5 (RESPONSE FORMATTING): Format your responses as professional Markdown reports with headings, bold text, bullet points, tables, and relevant emojis (✨, 📊, 📈).
     
-    RULE 2: If a user provides an ORDER NUMBER and asks for related details (like payment or customer info),
-    you MUST follow this two-step process:
-    1. First, use the 'getSingleOrderDetails' tool with the provided order number. This tool will give you the 'customer_id'.
-    2. Then, use that 'customer_id' to call other tools to get the extra information requested.
+    LAW 6 (LANGUAGE): If the user asks in Tamil, respond in Tamil.
     
-    Do not ask the user for the ID; find it yourself. If you find multiple customers with the same name, ask the user for clarification.
-    
-    RULE 3: If the user asks a question in Tamil, you MUST respond in Tamil.
+    LAW 7 (NO JARGON): NEVER mention 'JSON', 'API', etc.
   ` }]
 };
-const imageCreatorSystemInstruction = { role: "system", parts: [{ text: "You are an image generation assistant. Use the 'createImage' tool. When you get the image data back from the tool, just say 'Here is the image you requested:' followed by the data." }]};
 
 // --- TOOLS DEFINITION ---
-const classicTools = [{ functionDeclarations: [ { name: "getCustomerDetails", description: "Get customer details by name.", parameters: { type: "OBJECT", properties: { "customer_name": { type: "STRING" } }, required: ["customer_name"] } }, { name: "getSingleOrderDetails", description: "Get single order details by order ID.", parameters: { type: "OBJECT", properties: { "order_id": { type: "NUMBER" } }, required: ["order_id"] } }, { name: "getOrdersForCustomer", description: "Get all orders for a customer by ID.", parameters: { type: "OBJECT", properties: { "customer_id": { type: "STRING" } }, required: ["customer_id"] } }, { name: "getPaymentsForCustomer", description: "Get all payments for a customer by ID.", parameters: { type: "OBJECT", properties: { "customer_id": { type: "STRING" } }, required: ["customer_id"] } }, { name: "getFinancialSummary", description: "Get financial summary for a month (YYYY-MM-DD).", parameters: { type: "OBJECT", properties: { "month": { type: "STRING" } }, required: ["month"] } }, { name: "getRecentDuePayments", description: "Get recent due payments.", parameters: { type: "OBJECT", properties: {} } }, { name: "getLowStockMaterials", description: "Get low stock materials.", parameters: { type: "OBJECT", properties: {} } }, { name: "getTopSpendingCustomers", description: "Get top spending customers.", parameters: { type: "OBJECT", properties: { "limit": { type: "NUMBER" } }, required: ["limit"] } }, { name: "getEmployeePerformance", description: "Get employee performance by name.", parameters: { type: "OBJECT", properties: { "employee_name": { type: "STRING" } }, required: ["employee_name"] } }, { name: "getBestSellingProducts", description: "Get best selling products.", parameters: { type: "OBJECT", properties: { "limit": { type: "NUMBER" } }, required: ["limit"] } }, { name: "createNewCustomer", description: "Create a new customer.", parameters: { type: "OBJECT", properties: { "name": { type: "STRING" }, "phone": { type: "STRING" }, "address": { type: "STRING" } }, required: ["name", "phone"] } }, { name: "logNewExpense", description: "Log a new expense.", parameters: { type: "OBJECT", properties: { "expense_type": { type: "STRING" }, "amount": { type: "NUMBER" }, "paid_to": { type: "STRING" } }, required: ["expense_type", "amount", "paid_to"] } } ] }];
-const imageCreatorTool = [{ functionDeclarations: [{ name: "createImage", description: "Creates a photorealistic image based on a detailed textual description.", parameters: { type: "OBJECT", properties: { "prompt": { type: "STRING" } }, required: ["prompt"] } }] }];
+const classicTools = [{ functionDeclarations: [
+    {
+        name: "performWebSearch",
+        description: "Use this to get real-time information, especially the current date. This is the first step for all time-related queries.",
+        parameters: { "type": "OBJECT", "properties": { "query": { "type": "STRING" } }, required: ["query"] }
+    },
+    {
+      name: "listNewCustomers",
+      description: "Lists the full details of new customers acquired within a specific date range.",
+      parameters: { "type": "OBJECT", "properties": { "start_date": { "type": "STRING" }, "end_date": { "type": "STRING" } }, "required": ["start_date", "end_date"] }
+    },
+    {
+      name: "getNewCustomerCount",
+      description: "Gets ONLY the number/count of new customers in a date range.",
+      parameters: { "type": "OBJECT", "properties": { "start_date": { "type": "STRING" }, "end_date": { "type": "STRING" } }, "required": ["start_date", "end_date"] }
+    },
+    {
+      name: "getFinancialReport",
+      description: "Use this for any request about financials (revenue, expenses, profit) within a date range.",
+      parameters: { "type": "OBJECT", "properties": { "start_date": { "type": "STRING" }, "end_date": { "type": "STRING" } }, "required": ["start_date", "end_date"] }
+    },
+    { name: "getCustomerDetails", description: "Get customer details by name.", parameters: { "type": "OBJECT", "properties": { "customer_name": { "type": "STRING" } }, "required": ["customer_name"] } }, 
+    { name: "getSingleOrderDetails", description: "Get single order details by order ID.", parameters: { "type": "OBJECT", "properties": { "order_id": { "type": "NUMBER" } }, "required": ["order_id"] } }, 
+    { name: "getOrdersForCustomer", description: "Get all orders for a customer by ID.", parameters: { "type": "OBJECT", "properties": { "customer_id": { "type": "STRING" } }, "required": ["customer_id"] } }, 
+    { name: "getPaymentsForCustomer", description: "Get all payments for a customer by ID.", parameters: { "type": "OBJECT", "properties": { "customer_id": { "type": "STRING" } }, "required": ["customer_id"] } }, 
+    { name: "getFinancialSummary", description: "Get financial summary for a month (YYYY-MM-DD).", parameters: { "type": "OBJECT", "properties": { "month": { type: "STRING" } }, "required": ["month"] } }, 
+    { name: "getRecentDuePayments", description: "Get recent due payments.", parameters: { "type": "OBJECT", "properties": {} } }, 
+    { name: "getLowStockMaterials", description: "Get low stock materials.", parameters: { "type": "OBJECT", "properties": {} } }, 
+    { name: "getTopSpendingCustomers", description: "Get top spending customers.", parameters: { "type": "OBJECT", "properties": { "limit": { "type": "NUMBER" } }, "required": ["limit"] } }, 
+    { name: "getEmployeePerformance", description: "Get employee performance by name.", parameters: { "type": "OBJECT", "properties": { "employee_name": { "type": "STRING" } }, "required": ["employee_name"] } }, 
+    { name: "getBestSellingProducts", description: "Get best selling products.", parameters: { "type": "OBJECT", "properties": { "limit": { "type": "NUMBER" } }, "required": ["limit"] } }, 
+    { name: "createNewCustomer", description: "Create a new customer.", parameters: { "type": "OBJECT", "properties": { "name": { "type": "STRING" }, "phone": { "type": "STRING" }, "address": { "type": "STRING" } }, "required": ["name", "phone"] } }, 
+    { name: "logNewExpense", description: "Log a new expense.", parameters: { "type": "OBJECT", "properties": { "expense_type": { "type": "STRING" }, "amount": { "type": "NUMBER" }, "paid_to": { "type": "STRING" } }, "required": ["expense_type", "amount", "paid_to"] } } 
+] }];
 
 async function performPerplexitySearch(query: string): Promise<string> {
     if (!perplexityApiKey) return "Error: PPLX_API_KEY not configured.";
@@ -61,38 +93,11 @@ async function performPerplexitySearch(query: string): Promise<string> {
     } catch (error) { return `Failed to connect to Perplexity API: ${error.message}`; }
 }
 
-async function generateStableImage(prompt: string): Promise<string> {
-    if (!stabilityApiKey) {
-        return "பிழை: STABILITY_API_KEY சேமிக்கப்படவில்லை. தயவுசெய்து Supabase திட்டத்தின் Secrets பகுதியில் உங்கள் API சாவியைச் சேர்க்கவும்.";
-    }
-    const engineId = "stable-diffusion-v1-6";
-    const apiHost = "https://api.stability.ai";
-    try {
-        const response = await fetch(`${apiHost}/v1/generation/${engineId}/text-to-image`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': `Bearer ${stabilityApiKey}` },
-            body: JSON.stringify({ text_prompts: [{ text: prompt }], cfg_scale: 7, height: 512, width: 512, steps: 30, samples: 1 }),
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Stability API Error! Status: ${response.status}, Body: ${errorText}`);
-            return `படத்தை உருவாக்க முடியவில்லை. Stability API-யிலிருந்து பிழை: HTTP ஸ்டேட்டஸ் ${response.status}. உங்கள் 'STABILITY_API_KEY' சரியாக உள்ளதா என்பதை மீண்டும் சரிபார்க்கவும்.`;
-        }
-        const responseJSON = await response.json();
-        const imageBase64 = responseJSON.artifacts[0].base64;
-        return `data:image/png;base64,${imageBase64}`;
-    } catch (error) {
-        console.error("Fetch to Stability AI failed:", error);
-        return `பிழை: Stability AI API-ஐ இணைப்பதில் சிக்கல். ${error.message}`;
-    }
-}
-
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" } });
   try {
-    const { history, agentType } = await req.json();
-    if (!history || !agentType) return new Response(JSON.stringify({ error: "History and agentType are required." }), { status: 400 });
+    const { history } = await req.json(); 
+    if (!history) return new Response(JSON.stringify({ error: "History is required." }), { status: 400 });
 
     const userToken = req.headers.get("Authorization")?.replace("Bearer ", "");
     if (!userToken) return new Response(JSON.stringify({ error: "Authorization required." }), { status: 401 });
@@ -102,21 +107,7 @@ serve(async (req) => {
     const latestUserMessage = history[history.length - 1]?.parts[0]?.text;
     if (!latestUserMessage) return new Response(JSON.stringify({ error: "User message is missing." }), { status: 400 });
 
-    if (agentType === 'web') {
-        const searchResult = await performPerplexitySearch(latestUserMessage);
-        return new Response(JSON.stringify({ response: searchResult }), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
-    }
-
-    let tools, systemInstruction;
-    if (agentType === 'image') {
-        tools = imageCreatorTool;
-        systemInstruction = imageCreatorSystemInstruction;
-    } else {
-        tools = classicTools;
-        systemInstruction = classicSystemInstruction;
-    }
-
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest", tools, systemInstruction, safetySettings });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest", tools: classicTools, systemInstruction: classicSystemInstruction, safetySettings });
     const chat = model.startChat({ history: history.slice(0, -1) });
     let result = await chat.sendMessage(latestUserMessage);
 
@@ -126,11 +117,25 @@ serve(async (req) => {
         const call = functionCalls[0];
         let toolResponseContent;
         
-        if (call.name === "createImage") {
-            toolResponseContent = await generateStableImage(call.args.prompt);
-        } else {
-            // ... (Full classic tools logic)
-            if (call.name === "getCustomerDetails") {
+        console.log(`[LOG] AI wants to call: ${call.name} with args: ${JSON.stringify(call.args)}`);
+
+        try {
+            if (call.name === "performWebSearch") {
+                toolResponseContent = await performPerplexitySearch(call.args.query);
+            }
+            else if (call.name === "listNewCustomers") {
+                const { data, error } = await supabase.rpc('list_new_customers_by_date', { start_date: call.args.start_date, end_date: call.args.end_date });
+                toolResponseContent = error ? `DB Error: ${error.message}` : JSON.stringify(data);
+            }
+            else if (call.name === "getNewCustomerCount") {
+                const { data, error } = await supabase.rpc('get_new_customer_count', { start_date: call.args.start_date, end_date: call.args.end_date });
+                toolResponseContent = error ? `DB Error: ${error.message}` : JSON.stringify(data);
+            }
+            else if (call.name === "getFinancialReport") {
+                const { data, error } = await supabase.rpc('get_financial_report_for_period', { start_date: call.args.start_date, end_date: call.args.end_date });
+                toolResponseContent = error ? `DB Error: ${error.message}` : JSON.stringify(data);
+            }
+            else if (call.name === "getCustomerDetails") {
                 const { data, error } = await supabase.from("customers").select().ilike("name", `%${call.args.customer_name}%`);
                 toolResponseContent = error ? `DB Error: ${error.message}` : JSON.stringify(data || 'Not found');
             } else if (call.name === "getSingleOrderDetails") {
@@ -171,6 +176,9 @@ serve(async (req) => {
             } else {
                  toolResponseContent = `Unknown function call: ${call.name}`;
             }
+        } catch(e) {
+            console.error(`[ERROR] Tool ${call.name} failed:`, e.message);
+            toolResponseContent = `Error: The function '${call.name}' failed.`;
         }
         
         result = await chat.sendMessage(JSON.stringify({ functionResponse: { name: call.name, response: { content: toolResponseContent } } }));
