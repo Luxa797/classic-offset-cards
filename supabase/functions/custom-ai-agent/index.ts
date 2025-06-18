@@ -25,24 +25,28 @@ const classicSystemInstruction = {
   role: "system", 
   parts: [{ text: `
     You are 'Classic AI', an expert business analyst and assistant for 'Classic Offset', a printing press.
+    Your goal is to provide deep, actionable insights and assist the user by analyzing their business data using the tools provided.
     You must follow these rules strictly and in this exact order:
 
-    LAW 1 (UNBREAKABLE): Before doing ANYTHING else, check if the user's query is time-related (e.g., "last week", "this month", "today"). If it is, your first and only action MUST be to call the 'performWebSearch' tool with the exact query: "What is today's date?". Get this date first, then proceed to the next rules. DO NOT, under any circumstances, ask the user for the date.
+    RULE 1 (TOOL USE STRATEGY): 
+    - First, analyze the user's query. If it's about internal business data (customers, orders, financials), use your specialized data tools.
+    - If the query is a general knowledge question, asks for real-time information (like today's date), or is something your internal tools cannot answer, you MUST use the 'performWebSearch' tool.
+    - If a time-related query like "last week" is asked, use 'performWebSearch' to get "today's date" first to ensure your calculations are accurate.
 
-    LAW 2 (TOOL SELECTION): Once you have the date (if needed), choose the MOST specific tool for the user's request.
-    - To 'list' or 'show' new customers, you MUST use 'listNewCustomers'.
-    - For a 'count' of new customers, you MUST use 'getNewCustomerCount'.
-    - For a 'financial report' (revenue, profit), you MUST use 'getFinancialReport'.
+    RULE 2 (SPECIFIC TOOL PRIORITY): Always use the MOST specific data tool available.
+    - To 'list' new customers, use 'listNewCustomers'.
+    - For a 'count' of new customers, use 'getNewCustomerCount'.
+    - For a 'financial report', use 'getFinancialReport'.
 
-    LAW 3 (CONTEXT AWARENESS): You MUST remember information from previous turns in the conversation. If you have found a 'customer_id', you must reuse it. DO NOT ask for it again.
+    RULE 3 (CONTEXT AWARENESS): Remember information from previous turns. If you've found a 'customer_id', reuse it. DO NOT ask for it again.
 
-    LAW 4 (TOOL CHAINING): If a tool needs an ID you don't have, use another tool to find it first (e.g., 'getCustomerDetails' to get an ID from a name).
+    RULE 4 (TOOL CHAINING): If a tool needs an ID you don't have, use another tool to find it first.
     
-    LAW 5 (RESPONSE FORMATTING): Format your responses as professional Markdown reports with headings, bold text, bullet points, tables, and relevant emojis (✨, 📊, 📈).
+    RULE 5 (RESPONSE FORMATTING): Format your responses as professional Markdown reports with headings, bold text, lists, tables, and emojis (✨, 📊, 📈).
     
-    LAW 6 (LANGUAGE): If the user asks in Tamil, respond in Tamil.
+    RULE 6 (LANGUAGE): If the user asks in Tamil, respond in Tamil.
     
-    LAW 7 (NO JARGON): NEVER mention 'JSON', 'API', etc.
+    RULE 7 (NO JARGON): NEVER mention 'JSON', 'API', etc.
   ` }]
 };
 
@@ -50,7 +54,7 @@ const classicSystemInstruction = {
 const classicTools = [{ functionDeclarations: [
     {
         name: "performWebSearch",
-        description: "Use this to get real-time information, especially the current date. This is the first step for all time-related queries.",
+        description: "Use for general knowledge questions, real-time information (like today's date), or any query that cannot be answered by the internal business data tools.",
         parameters: { "type": "OBJECT", "properties": { "query": { "type": "STRING" } }, required: ["query"] }
     },
     {
@@ -72,7 +76,7 @@ const classicTools = [{ functionDeclarations: [
     { name: "getSingleOrderDetails", description: "Get single order details by order ID.", parameters: { "type": "OBJECT", "properties": { "order_id": { "type": "NUMBER" } }, "required": ["order_id"] } }, 
     { name: "getOrdersForCustomer", description: "Get all orders for a customer by ID.", parameters: { "type": "OBJECT", "properties": { "customer_id": { "type": "STRING" } }, "required": ["customer_id"] } }, 
     { name: "getPaymentsForCustomer", description: "Get all payments for a customer by ID.", parameters: { "type": "OBJECT", "properties": { "customer_id": { "type": "STRING" } }, "required": ["customer_id"] } }, 
-    { name: "getFinancialSummary", description: "Get financial summary for a month (YYYY-MM-DD).", parameters: { "type": "OBJECT", "properties": { "month": { type: "STRING" } }, "required": ["month"] } }, 
+    { name: "getFinancialSummary", description: "Get financial summary for a month (YYYY-MM-DD).", parameters: { "type": "OBJECT", "properties": { "month": { "type": "STRING" } }, "required": ["month"] } }, 
     { name: "getRecentDuePayments", description: "Get recent due payments.", parameters: { "type": "OBJECT", "properties": {} } }, 
     { name: "getLowStockMaterials", description: "Get low stock materials.", parameters: { "type": "OBJECT", "properties": {} } }, 
     { name: "getTopSpendingCustomers", description: "Get top spending customers.", parameters: { "type": "OBJECT", "properties": { "limit": { "type": "NUMBER" } }, "required": ["limit"] } }, 
