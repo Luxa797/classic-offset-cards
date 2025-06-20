@@ -27,6 +27,39 @@ const classicSystemInstruction = {
     You are 'Classic AI', an expert business analyst and assistant for 'Classic Offset', a printing press.
     Your goal is to provide deep, actionable insights and assist the user by analyzing their business data using the tools provided.
     You must follow these rules strictly and in this exact order:
+<<<<<<< HEAD
+
+    RULE 1 (TOOL USE STRATEGY): 
+    - First, analyze the user's query. If it's about internal business data (customers, orders, financials), use your specialized data tools.
+    - If the user asks for a "dashboard", "summary", "overview", or "key metrics", you SHOULD use the 'getDashboardMetrics' tool.
+    - If the query is a general knowledge question, asks for real-time information (like today's date), or is something your internal tools cannot answer, you MUST use the 'performWebSearch' tool.
+
+    RULE 2 (SPECIFIC TOOL PRIORITY): Always use the MOST specific data tool available.
+    - To 'list' new customers, use 'listNewCustomers'.
+    - For a 'count' of new customers, use 'getNewCustomerCount'.
+    - For a 'financial report', use 'getFinancialReport'.
+
+    RULE 3 (CONTEXT AWARENESS): Remember information from previous turns. If you've found a 'customer_id', reuse it. DO NOT ask for it again.
+
+    RULE 4 (TOOL CHAINING): If a tool needs an ID you don't have, use another tool to find it first.
+    
+    RULE 5 (RESPONSE FORMATTING): Format your responses as professional Markdown reports with headings, bold text, lists, tables, and emojis (✨, 📊, 📈).
+    
+    RULE 6 (LANGUAGE): If the user asks in Tamil, respond in Tamil.
+    
+    RULE 7 (NO JARGON): NEVER mention 'JSON', 'API', etc.
+  ` }]
+};
+
+// --- TOOLS DEFINITION (STABLE + NEW) ---
+const classicTools = [{ functionDeclarations: [
+    {
+        name: "getDashboardMetrics",
+        description: "Retrieves a summary of key business metrics like revenue, customers, orders, and dues. Use this for a general overview.",
+        parameters: { "type": "OBJECT", "properties": {} }
+    },
+    {
+=======
 
     RULE 1 (TOOL USE STRATEGY): 
     - First, analyze the user's query. If it's about internal business data (customers, orders, financials), use your specialized data tools.
@@ -53,6 +86,7 @@ const classicSystemInstruction = {
 // --- TOOLS DEFINITION ---
 const classicTools = [{ functionDeclarations: [
     {
+>>>>>>> 4c7c8a3cb7d81f65fef241fdd2d32721892b42d8
         name: "performWebSearch",
         description: "Use for general knowledge questions, real-time information (like today's date), or any query that cannot be answered by the internal business data tools.",
         parameters: { "type": "OBJECT", "properties": { "query": { "type": "STRING" } }, required: ["query"] }
@@ -72,6 +106,10 @@ const classicTools = [{ functionDeclarations: [
       description: "Use this for any request about financials (revenue, expenses, profit) within a date range.",
       parameters: { "type": "OBJECT", "properties": { "start_date": { "type": "STRING" }, "end_date": { "type": "STRING" } }, "required": ["start_date", "end_date"] }
     },
+<<<<<<< HEAD
+    // --- STABLE OLD TOOLS (UNCHANGED) ---
+=======
+>>>>>>> 4c7c8a3cb7d81f65fef241fdd2d32721892b42d8
     { name: "getCustomerDetails", description: "Get customer details by name.", parameters: { "type": "OBJECT", "properties": { "customer_name": { "type": "STRING" } }, "required": ["customer_name"] } }, 
     { name: "getSingleOrderDetails", description: "Get single order details by order ID.", parameters: { "type": "OBJECT", "properties": { "order_id": { "type": "NUMBER" } }, "required": ["order_id"] } }, 
     { name: "getOrdersForCustomer", description: "Get all orders for a customer by ID.", parameters: { "type": "OBJECT", "properties": { "customer_id": { "type": "STRING" } }, "required": ["customer_id"] } }, 
@@ -124,7 +162,15 @@ serve(async (req) => {
         console.log(`[LOG] AI wants to call: ${call.name} with args: ${JSON.stringify(call.args)}`);
 
         try {
+<<<<<<< HEAD
+            if (call.name === "getDashboardMetrics") {
+                const { data, error } = await supabase.rpc('get_dashboard_metrics');
+                toolResponseContent = error ? `DB Error: ${error.message}` : JSON.stringify(data);
+            }
+            else if (call.name === "performWebSearch") {
+=======
             if (call.name === "performWebSearch") {
+>>>>>>> 4c7c8a3cb7d81f65fef241fdd2d32721892b42d8
                 toolResponseContent = await performPerplexitySearch(call.args.query);
             }
             else if (call.name === "listNewCustomers") {
