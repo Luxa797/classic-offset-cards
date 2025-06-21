@@ -5,9 +5,10 @@ import Card from '../ui/Card';
 import { 
   DollarSign, TrendingUp, TrendingDown, Clock, 
   Users, CreditCard, AlertTriangle, CheckCircle,
-  Calendar, BarChart3, PieChart, Activity
+  Calendar, BarChart3, PieChart, Activity, Loader2, Info
 } from 'lucide-react';
 
+// --- Data Interfaces ---
 interface PaymentMetrics {
   totalOrders: number;
   totalRevenue: number;
@@ -33,7 +34,6 @@ interface RecentPayment {
   created_at: string;
 }
 
-// ✅ மாற்றம்: due_status-ஐ interface-ல் சேர்க்கவும்
 interface SummaryOrderData {
   order_id: number;
   customer_name: string;
@@ -42,14 +42,28 @@ interface SummaryOrderData {
   balance_due: number;
   date: string;
   delivery_date?: string;
-  due_status: 'Paid' | 'Overdue' | 'Due Soon'; // due_status-ஐப் பெறவும்
+  due_status: 'Paid' | 'Overdue' | 'Due Soon';
 }
 
+// --- Reusable Metric Card Component ---
+const MetricDisplayCard = ({ title, value, detail, icon, iconBgColor }: { title: string; value: string; detail: string; icon: React.ReactNode; iconBgColor: string; }) => (
+    <Card className="p-5 bg-white dark:bg-gray-800 flex items-center gap-5 hover:shadow-xl transition-shadow duration-300">
+        <div className={`p-4 rounded-full ${iconBgColor}`}>
+            {icon}
+        </div>
+        <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{title}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">{detail}</p>
+        </div>
+    </Card>
+);
 
 const PaymentDashboard: React.FC = () => {
   const [metrics, setMetrics] = useState<PaymentMetrics | null>(null);
   const [recentPayments, setRecentPayments] = useState<RecentPayment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState('30'); // days
 
   useEffect(() => {
@@ -58,23 +72,14 @@ const PaymentDashboard: React.FC = () => {
 
   const fetchDashboardData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const daysAgo = new Date();
       daysAgo.setDate(daysAgo.getDate() - parseInt(selectedPeriod));
 
-      // ✅ மாற்றம்: due_status பத்தியையும் select செய்யவும்
       const { data: summaryOrders, error: summaryOrdersError } = await supabase
         .from('order_summary_with_dues')
-        .select(`
-          order_id,
-          customer_name,
-          total_amount,
-          amount_paid,
-          balance_due,
-          date,
-          delivery_date,
-          due_status 
-        `)
+        .select(`order_id, customer_name, total_amount, amount_paid, balance_due, date, delivery_date, due_status`)
         .gte('date', daysAgo.toISOString())
         .order('date', { ascending: false });
 
@@ -82,49 +87,28 @@ const PaymentDashboard: React.FC = () => {
 
       const { data: payments, error: paymentsError } = await supabase
         .from('payments')
-        .select(`
-          id,
-          amount_paid,
-          payment_method,
-          created_at,
-          customers (name)
-        `)
+        .select(`id, amount_paid, payment_method, created_at, customers (name)`)
         .gte('created_at', daysAgo.toISOString());
 
       if (paymentsError) throw paymentsError;
 
+      // --- Data Processing Logic (Unchanged) ---
       const totalOrders = summaryOrders?.length || 0;
       const totalRevenue = summaryOrders?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
       const totalReceived = summaryOrders?.reduce((sum, o) => sum + (o.amount_paid || 0), 0) || 0;
       const pendingAmount = summaryOrders?.reduce((sum, o) => sum + (o.balance_due || 0), 0) || 0;
-
-      // ✅ சரி செய்யப்பட்டது: Overdue Amount-ஐ நேரடியாக due_status-லிருந்து கணக்கிடவும்
-      const overdueAmount = summaryOrders?.reduce((sum, o) => {
-        return sum + (o.due_status === 'Overdue' ? (o.balance_due || 0) : 0);
-      }, 0) || 0;
-
+      const overdueAmount = summaryOrders?.reduce((sum, o) => sum + (o.due_status === 'Overdue' ? (o.balance_due || 0) : 0), 0) || 0;
       const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-
-      // ✅ சரி செய்யப்பட்டது: Order Status-ஐ நேரடியாக due_status-லிருந்து கணக்கிடவும்
       const ordersByStatus = summaryOrders?.reduce((acc, o) => {
-        if ((o.balance_due || 0) <= 0) {
-          acc.paid += 1;
-        } else if (o.due_status === 'Overdue') {
-          acc.overdue += 1;
-        } else if (o.due_status === 'Due Soon') {
-          if ((o.amount_paid || 0) > 0) {
-            acc.partial += 1;
-          } else {
-            acc.due += 1;
-          }
+        if ((o.balance_due || 0) <= 0) acc.paid += 1;
+        else if (o.due_status === 'Overdue') acc.overdue += 1;
+        else if (o.due_status === 'Due Soon') {
+            if ((o.amount_paid || 0) > 0) acc.partial += 1; else acc.due += 1;
         }
         return acc;
       }, { paid: 0, partial: 0, due: 0, overdue: 0 }) || { paid: 0, partial: 0, due: 0, overdue: 0 };
-      
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
       const recentPaymentsCount = payments?.filter(p => new Date(p.created_at) > weekAgo).length || 0;
-
       const paymentMethods = payments?.reduce((acc, p) => {
         const method = p.payment_method || 'Unknown';
         acc[method] = (acc[method] || 0) + 1;
@@ -132,168 +116,121 @@ const PaymentDashboard: React.FC = () => {
       }, {} as Record<string, number>) || {};
 
       setMetrics({
-        totalOrders,
-        totalRevenue,
-        totalReceived,
-        pendingAmount,
-        overdueAmount,
-        averageOrderValue,
-        ordersByStatus,
-        recentPayments: recentPaymentsCount,
-        paymentMethods
+        totalOrders, totalRevenue, totalReceived, pendingAmount, overdueAmount,
+        averageOrderValue, ordersByStatus, recentPayments: recentPaymentsCount, paymentMethods
       });
-
-      const recent = payments
-        ?.map(p => ({
-          id: p.id,
-          customer_name: (p.customers as any)?.name || 'Unknown',
-          amount_paid: p.amount_paid,
-          status: 'Paid',
-          created_at: p.created_at
-        }))
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5) || [];
-
+      
+      const recent = payments?.map(p => ({
+        id: p.id, customer_name: (p.customers as any)?.name || 'Unknown', amount_paid: p.amount_paid,
+        status: 'Paid', created_at: p.created_at
+      })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5) || [];
       setRecentPayments(recent);
-    } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
+
+    } catch (err: any) {
+      console.error('Failed to fetch dashboard data:', err);
+      setError(err.message || "An unknown error occurred.");
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Paid': return 'text-green-600';
-      case 'Partial': return 'text-yellow-600';
-      case 'Overdue': return 'text-red-600';
-      case 'Due': return 'text-blue-600';
-      default: return 'text-gray-600';
-    }
-  };
-
+  // --- Main Render Logic ---
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
-        {Array(8).fill(0).map((_, i) => (
-          <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-        ))}
+      <div className="p-6 space-y-6">
+          <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg w-1/3 animate-pulse"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
+              {Array(4).fill(0).map((_, i) => <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>)}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-pulse">
+              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+          </div>
       </div>
     );
   }
 
-  if (!metrics) {
+  if (error || !metrics) {
     return (
-      <Card className="p-6 text-center">
-        <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-        <p className="text-gray-500">Failed to load payment metrics</p>
+      <Card className="p-10 text-center bg-white dark:bg-gray-800">
+        <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-red-400" />
+        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Failed to Load Data</h3>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">{error || "Could not retrieve payment metrics."}</p>
       </Card>
     );
   }
+  
+  const totalStatusCount = Object.values(metrics.ordersByStatus).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Payment Analytics</h2>
-        <select
-          value={selectedPeriod}
-          onChange={(e) => setSelectedPeriod(e.target.value)}
-          className="px-3 py-2 border rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600"
-        >
-          <option value="7">Last 7 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-          <option value="365">Last year</option>
-        </select>
+    <div className="p-4 sm:p-6 space-y-6 bg-slate-50 dark:bg-slate-900">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Payment Dashboard</h1>
+        <div className="relative">
+            <Calendar className="w-4 h-4 text-gray-400 absolute top-1/2 left-3 -translate-y-1/2 pointer-events-none" />
+            <select
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value)}
+                className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-primary-500"
+            >
+                <option value="7">Last 7 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="365">Last 365 days</option>
+            </select>
+        </div>
       </div>
 
+      {/* Main Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg"><DollarSign className="w-6 h-6 text-green-600" /></div>
-            <div>
-              <p className="text-sm text-gray-500">Total Collected</p>
-              <p className="text-2xl font-bold">₹{metrics.totalReceived.toLocaleString()}</p>
-              <p className="text-xs text-green-600">from {metrics.totalOrders} orders</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg"><Clock className="w-6 h-6 text-yellow-600" /></div>
-            <div>
-              <p className="text-sm text-gray-500">Pending Amount</p>
-              <p className="text-2xl font-bold">₹{metrics.pendingAmount.toLocaleString()}</p>
-              <p className="text-xs text-yellow-600">{metrics.ordersByStatus.due + metrics.ordersByStatus.partial} orders pending</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg"><AlertTriangle className="w-6 h-6 text-red-600" /></div>
-            <div>
-              <p className="text-sm text-gray-500">Overdue Amount</p>
-              <p className="text-2xl font-bold">₹{metrics.overdueAmount.toLocaleString()}</p>
-              <p className="text-xs text-red-600">{metrics.ordersByStatus.overdue} overdue orders</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg"><BarChart3 className="w-6 h-6 text-blue-600" /></div>
-            <div>
-              <p className="text-sm text-gray-500">Average Order Value</p>
-              <p className="text-2xl font-bold">₹{metrics.averageOrderValue.toLocaleString()}</p>
-              <p className="text-xs text-blue-600">{metrics.recentPayments} payments this week</p>
-            </div>
-          </div>
-        </Card>
+        <MetricDisplayCard title="Total Collected" value={`₹${metrics.totalReceived.toLocaleString()}`} detail={`from ${metrics.totalOrders} orders`} icon={<DollarSign className="w-7 h-7 text-green-600" />} iconBgColor="bg-green-100 dark:bg-green-900/50" />
+        <MetricDisplayCard title="Pending Amount" value={`₹${metrics.pendingAmount.toLocaleString()}`} detail={`${metrics.ordersByStatus.due + metrics.ordersByStatus.partial} orders pending`} icon={<Clock className="w-7 h-7 text-yellow-600" />} iconBgColor="bg-yellow-100 dark:bg-yellow-900/50" />
+        <MetricDisplayCard title="Overdue Amount" value={`₹${metrics.overdueAmount.toLocaleString()}`} detail={`${metrics.ordersByStatus.overdue} overdue orders`} icon={<AlertTriangle className="w-7 h-7 text-red-600" />} iconBgColor="bg-red-100 dark:bg-red-900/50" />
+        <MetricDisplayCard title="Avg. Order Value" value={`₹${metrics.averageOrderValue.toLocaleString('en-IN', {maximumFractionDigits: 0})}`} detail={`${metrics.recentPayments} payments this week`} icon={<BarChart3 className="w-7 h-7 text-blue-600" />} iconBgColor="bg-blue-100 dark:bg-blue-900/50" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><PieChart className="w-5 h-5" />Order Payment Status</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg"><div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-600" /><span className="text-sm">Fully Paid</span></div><span className="font-bold text-green-600">{metrics.ordersByStatus.paid}</span></div>
-            <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg"><div className="flex items-center gap-2"><Clock className="w-4 h-4 text-yellow-600" /><span className="text-sm">Partially Paid</span></div><span className="font-bold text-yellow-600">{metrics.ordersByStatus.partial}</span></div>
-            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg"><div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-600" /><span className="text-sm">Payment Due</span></div><span className="font-bold text-blue-600">{metrics.ordersByStatus.due}</span></div>
-            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg"><div className="flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-red-600" /><span className="text-sm">Overdue</span></div><span className="font-bold text-red-600">{metrics.ordersByStatus.overdue}</span></div>
+      {/* Status & Recent Transactions */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <Card className="p-6 bg-white dark:bg-gray-800 lg:col-span-2">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white"><PieChart className="w-5 h-5" />Order Payment Status</h3>
+          <div className="space-y-4">
+             {Object.entries(metrics.ordersByStatus).map(([status, count]) => {
+                const colors = { paid: 'bg-green-500', partial: 'bg-yellow-500', due: 'bg-blue-500', overdue: 'bg-red-500'};
+                const percentage = totalStatusCount > 0 ? (count / totalStatusCount) * 100 : 0;
+                return(
+                    <div key={status}>
+                        <div className="flex justify-between items-center text-sm mb-1">
+                            <span className="font-medium text-gray-700 dark:text-gray-300 capitalize">{status}</span>
+                            <span className="font-semibold text-gray-800 dark:text-white">{count} Orders</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                            <div className={`${colors[status as keyof typeof colors]} h-2.5 rounded-full`} style={{ width: `${percentage}%` }}></div>
+                        </div>
+                    </div>
+                )
+            })}
           </div>
         </Card>
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Activity className="w-5 h-5" />Recent Payment Transactions</h3>
-          <div className="space-y-3">
+        <Card className="p-6 bg-white dark:bg-gray-800 lg:col-span-3">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white"><Activity className="w-5 h-5" />Recent Transactions</h3>
+          <div className="space-y-3 max-h-80 overflow-y-auto">
             {recentPayments.length > 0 ? (
               recentPayments.map((payment) => (
-                <div key={payment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">{payment.customer_name}</p>
-                    <p className="text-xs text-gray-500">{new Date(payment.created_at).toLocaleDateString()}</p>
+                <div key={payment.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-gray-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-gray-700">
+                  <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-full"><CheckCircle className="w-5 h-5 text-green-600"/></div>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">{payment.customer_name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(payment.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'})}</p>
+                      </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold">₹{payment.amount_paid.toLocaleString()}</p>
-                    <p className={`text-xs font-medium ${getStatusColor(payment.status)}`}>{payment.status}</p>
-                  </div>
+                  <p className="font-bold text-lg text-gray-900 dark:text-white">₹{payment.amount_paid.toLocaleString('en-IN')}</p>
                 </div>
               ))
-            ) : <div className="text-center py-8 text-gray-500"><DollarSign className="w-8 h-8 mx-auto" /><p>No recent payment transactions</p></div>}
+            ) : <div className="text-center py-12 text-gray-500 dark:text-gray-400"><DollarSign className="w-10 h-10 mx-auto text-gray-400" /><p className="mt-2">No recent payment transactions</p></div>}
           </div>
         </Card>
       </div>
-
-      {Object.keys(metrics.paymentMethods).length > 0 && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><CreditCard className="w-5 h-5" />Payment Methods Used</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Object.entries(metrics.paymentMethods).map(([method, count]) => (
-              <div key={method} className="text-center p-3 bg-gray-50 rounded-lg">
-                <p className="font-bold text-lg">{count}</p>
-                <p className="text-sm text-gray-500">{method}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
     </div>
   );
 };
