@@ -17,11 +17,11 @@ interface InvoiceViewProps {
   order: OrderDetails;
 }
 
-const InvoiceView = React.forwardRef<HTMLDivElement, InvoiceViewProps>(({ order }, ref) => {
+const InvoiceView: React.FC<InvoiceViewProps> = ({ order }) => {
   const { customer } = order;
 
   return (
-    <div ref={ref} className="bg-white rounded-lg p-6">
+    <div className="bg-white rounded-lg p-6">
       <div className="flex justify-between items-start mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">INVOICE</h1>
@@ -43,9 +43,10 @@ const InvoiceView = React.forwardRef<HTMLDivElement, InvoiceViewProps>(({ order 
         </div>
         <div className="text-right">
           <h2 className="text-lg font-semibold text-gray-800">From:</h2>
-          <p className="text-gray-700">Classic Offset</p>
-          <p className="text-gray-600">123 Print Street</p>
-          <p className="text-gray-600">Phone: +91 98765 43210</p>
+          <p className="text-gray-700">Classic Offset and cards</p>
+          <p className="text-gray-600">363, bazar road, kadayanallur -62775</p>
+          <p className="text-gray-600">Tenkasi District - Tamil Nadu</p>
+          <p className="text-gray-600">Phone: +91 98425 78847</p>
         </div>
       </div>
 
@@ -99,8 +100,6 @@ const InvoiceView = React.forwardRef<HTMLDivElement, InvoiceViewProps>(({ order 
       </div>
     </div>
   );
-});
-
-InvoiceView.displayName = 'InvoiceView';
+};
 
 export default InvoiceView;

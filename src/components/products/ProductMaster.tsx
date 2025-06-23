@@ -49,25 +49,24 @@ const ProductMaster: React.FC = () => {
       : supabase.from('products').insert(productData);
 
     toast.promise(
-      promise.then(({ error }) => {
-        if (error) throw error;
-      }),
+      promise,
       {
         loading: editingProduct ? 'Updating product...' : 'Adding product...',
-        success: `Product "${productData.name}" ${editingProduct ? 'updated' : 'added'}!`,
-        error: (err) => err.message || 'Failed to save product.',
+        success: (result) => {
+          if (result.error) {
+            throw result.error;
+          }
+          setEditingProduct(null);
+          fetchProducts();
+          setFormLoading(false);
+          return `Product "${productData.name}" ${editingProduct ? 'updated' : 'added'}!`;
+        },
+        error: (err) => {
+          setFormLoading(false);
+          return err.message || 'Failed to save product.';
+        },
       }
     );
-
-    try {
-      await promise;
-      setEditingProduct(null);
-      fetchProducts();
-    } catch (err) {
-      // Toast already handles the error
-    } finally {
-      setFormLoading(false);
-    }
   };
 
   const handleEdit = (product: Product) => {
@@ -81,24 +80,29 @@ const ProductMaster: React.FC = () => {
   
   const confirmDelete = async () => {
     if (!productToDelete) return;
+    
+    const productToDeleteName = productToDelete.name;
+    const productToDeleteId = productToDelete.id;
+
     setFormLoading(true);
     
-    const promise = supabase.from('products').delete().eq('id', productToDelete.id);
+    const promise = supabase.from('products').delete().eq('id', productToDeleteId);
+    
     toast.promise(promise, {
         loading: 'Deleting product...',
-        success: `Product "${productToDelete.name}" deleted.`,
-        error: (err) => err.message || 'Failed to delete product.'
+        success: (result) => {
+            if (result.error) throw result.error;
+            fetchProducts();
+            setFormLoading(false);
+            setProductToDelete(null);
+            return `Product "${productToDeleteName}" deleted.`;
+        },
+        error: (err) => {
+            setFormLoading(false);
+            setProductToDelete(null);
+            return err.message || 'Failed to delete product.'
+        }
     });
-
-    try {
-        await promise;
-        fetchProducts();
-    } catch (err) {
-      // Toast already handles the error
-    } finally {
-        setFormLoading(false);
-        setProductToDelete(null);
-    }
   };
 
   const handleView = (product: Product) => {

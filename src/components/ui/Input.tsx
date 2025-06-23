@@ -1,44 +1,51 @@
 // src/components/ui/Input.tsx
-import React from 'react';
+import React, { Children } from 'react';
+import { twMerge } from 'tailwind-merge';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+// Extend props to accept general element attributes and 'as' prop
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement | HTMLSelectElement> {
   label?: string;
   icon?: React.ReactNode;
   error?: string;
+  as?: 'input' | 'select';
+  children?: React.ReactNode; // To allow for <option> elements
 }
 
-const Input: React.FC<InputProps> = ({ label, id, icon, error, className = '', value, ...props }) => {
+const Input: React.FC<InputProps> = ({ label, id, icon, error, className = '', as = 'input', children, ...props }) => {
+  const commonStyles = `
+    flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm 
+    ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium 
+    placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 
+    focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed 
+    disabled:opacity-50
+    ${error ? 'border-destructive focus:ring-destructive' : ''}
+    ${icon ? 'pl-10' : ''}
+  `;
+
+  const Component = as === 'select' ? 'select' : 'input';
+
   return (
-    <div className={className}>
+    <div className={twMerge("w-full", as === 'input' ? className : '')}>
       {label && (
-        <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-          {label} {props.required && <span className="text-red-500">*</span>}
+        <label htmlFor={id} className="block text-sm font-medium text-foreground mb-1.5">
+          {label} {props.required && <span className="text-destructive">*</span>}
         </label>
       )}
       <div className="relative">
         {icon && (
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
             {icon}
           </div>
         )}
-        <input
+        <Component
           id={id}
-          value={value ?? ''}
-          className={`
-            w-full px-3 py-2 border rounded-lg shadow-sm transition-colors
-            bg-white dark:bg-gray-700 
-            border-gray-300 dark:border-gray-600 
-            text-gray-900 dark:text-white
-            placeholder-gray-400 dark:placeholder-gray-500
-            focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-            disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed
-            ${error ? 'border-red-500 focus:ring-red-500' : ''}
-            ${icon ? 'pl-10' : ''}
-          `}
+          className={twMerge(commonStyles, as === 'select' ? className : '')}
           {...props}
-        />
+        >
+          {children}
+        </Component>
       </div>
-      {error && <p className="mt-1.5 text-xs text-red-500">{error}</p>}
+      {error && <p className="mt-1.5 text-xs text-destructive">{error}</p>}
     </div>
   );
 };

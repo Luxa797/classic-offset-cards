@@ -164,11 +164,11 @@ const PaymentDashboard: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Paid': return 'text-green-600';
-      case 'Partial': return 'text-yellow-600';
-      case 'Overdue': return 'text-red-600';
-      case 'Due': return 'text-blue-600';
-      default: return 'text-gray-600';
+      case 'Paid': return 'text-green-600 dark:text-green-400';
+      case 'Partial': return 'text-yellow-600 dark:text-yellow-400';
+      case 'Overdue': return 'text-red-600 dark:text-red-400';
+      case 'Due': return 'text-blue-600 dark:text-blue-400';
+      default: return 'text-gray-600 dark:text-gray-400';
     }
   };
 
@@ -184,9 +184,9 @@ const PaymentDashboard: React.FC = () => {
 
   if (!metrics) {
     return (
-      <Card className="p-6 text-center">
-        <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-        <p className="text-gray-500">Failed to load payment metrics</p>
+      <Card className="p-6 text-center bg-white dark:bg-gray-800">
+        <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+        <p className="text-gray-500 dark:text-gray-400">Failed to load payment metrics</p>
       </Card>
     );
   }
@@ -198,7 +198,7 @@ const PaymentDashboard: React.FC = () => {
         <select
           value={selectedPeriod}
           onChange={(e) => setSelectedPeriod(e.target.value)}
-          className="px-3 py-2 border rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600"
+          className="px-3 py-2 border rounded-lg text-sm bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600"
         >
           <option value="7">Last 7 days</option>
           <option value="30">Last 30 days</option>
@@ -208,87 +208,87 @@ const PaymentDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="p-6">
+        <Card className="p-6 bg-white dark:bg-gray-800">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg"><DollarSign className="w-6 h-6 text-green-600" /></div>
+            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg"><DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" /></div>
             <div>
-              <p className="text-sm text-gray-500">Total Collected</p>
-              <p className="text-2xl font-bold">₹{metrics.totalReceived.toLocaleString()}</p>
-              <p className="text-xs text-green-600">from {metrics.totalOrders} orders</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Total Collected</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">₹{metrics.totalReceived.toLocaleString()}</p>
+              <p className="text-xs text-green-600 dark:text-green-400">from {metrics.totalOrders} orders</p>
             </div>
           </div>
         </Card>
-        <Card className="p-6">
+        <Card className="p-6 bg-white dark:bg-gray-800">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg"><Clock className="w-6 h-6 text-yellow-600" /></div>
+            <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg"><Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" /></div>
             <div>
-              <p className="text-sm text-gray-500">Pending Amount</p>
-              <p className="text-2xl font-bold">₹{metrics.pendingAmount.toLocaleString()}</p>
-              <p className="text-xs text-yellow-600">{metrics.ordersByStatus.due + metrics.ordersByStatus.partial} orders pending</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Pending Amount</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">₹{metrics.pendingAmount.toLocaleString()}</p>
+              <p className="text-xs text-yellow-600 dark:text-yellow-400">{metrics.ordersByStatus.due + metrics.ordersByStatus.partial} orders pending</p>
             </div>
           </div>
         </Card>
-        <Card className="p-6">
+        <Card className="p-6 bg-white dark:bg-gray-800">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg"><AlertTriangle className="w-6 h-6 text-red-600" /></div>
+            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg"><AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" /></div>
             <div>
-              <p className="text-sm text-gray-500">Overdue Amount</p>
-              <p className="text-2xl font-bold">₹{metrics.overdueAmount.toLocaleString()}</p>
-              <p className="text-xs text-red-600">{metrics.ordersByStatus.overdue} overdue orders</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Overdue Amount</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">₹{metrics.overdueAmount.toLocaleString()}</p>
+              <p className="text-xs text-red-600 dark:text-red-400">{metrics.ordersByStatus.overdue} overdue orders</p>
             </div>
           </div>
         </Card>
-        <Card className="p-6">
+        <Card className="p-6 bg-white dark:bg-gray-800">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg"><BarChart3 className="w-6 h-6 text-blue-600" /></div>
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg"><BarChart3 className="w-6 h-6 text-blue-600 dark:text-blue-400" /></div>
             <div>
-              <p className="text-sm text-gray-500">Average Order Value</p>
-              <p className="text-2xl font-bold">₹{metrics.averageOrderValue.toLocaleString()}</p>
-              <p className="text-xs text-blue-600">{metrics.recentPayments} payments this week</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Average Order Value</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">₹{metrics.averageOrderValue.toLocaleString()}</p>
+              <p className="text-xs text-blue-600 dark:text-blue-400">{metrics.recentPayments} payments this week</p>
             </div>
           </div>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><PieChart className="w-5 h-5" />Order Payment Status</h3>
+        <Card className="p-6 bg-white dark:bg-gray-800">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white"><PieChart className="w-5 h-5" />Order Payment Status</h3>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg"><div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-600" /><span className="text-sm">Fully Paid</span></div><span className="font-bold text-green-600">{metrics.ordersByStatus.paid}</span></div>
-            <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg"><div className="flex items-center gap-2"><Clock className="w-4 h-4 text-yellow-600" /><span className="text-sm">Partially Paid</span></div><span className="font-bold text-yellow-600">{metrics.ordersByStatus.partial}</span></div>
-            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg"><div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-600" /><span className="text-sm">Payment Due</span></div><span className="font-bold text-blue-600">{metrics.ordersByStatus.due}</span></div>
-            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg"><div className="flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-red-600" /><span className="text-sm">Overdue</span></div><span className="font-bold text-red-600">{metrics.ordersByStatus.overdue}</span></div>
+            <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg"><div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" /><span className="text-sm text-gray-700 dark:text-gray-300">Fully Paid</span></div><span className="font-bold text-green-600 dark:text-green-400">{metrics.ordersByStatus.paid}</span></div>
+            <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg"><div className="flex items-center gap-2"><Clock className="w-4 h-4 text-yellow-600 dark:text-yellow-400" /><span className="text-sm text-gray-700 dark:text-gray-300">Partially Paid</span></div><span className="font-bold text-yellow-600 dark:text-yellow-400">{metrics.ordersByStatus.partial}</span></div>
+            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg"><div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" /><span className="text-sm text-gray-700 dark:text-gray-300">Payment Due</span></div><span className="font-bold text-blue-600 dark:text-blue-400">{metrics.ordersByStatus.due}</span></div>
+            <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg"><div className="flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" /><span className="text-sm text-gray-700 dark:text-gray-300">Overdue</span></div><span className="font-bold text-red-600 dark:text-red-400">{metrics.ordersByStatus.overdue}</span></div>
           </div>
         </Card>
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Activity className="w-5 h-5" />Recent Payment Transactions</h3>
+        <Card className="p-6 bg-white dark:bg-gray-800">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white"><Activity className="w-5 h-5" />Recent Payment Transactions</h3>
           <div className="space-y-3">
             {recentPayments.length > 0 ? (
               recentPayments.map((payment) => (
-                <div key={payment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div key={payment.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                   <div>
-                    <p className="font-medium">{payment.customer_name}</p>
-                    <p className="text-xs text-gray-500">{new Date(payment.created_at).toLocaleDateString()}</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{payment.customer_name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(payment.created_at).toLocaleDateString()}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold">₹{payment.amount_paid.toLocaleString()}</p>
+                    <p className="font-bold text-gray-900 dark:text-white">₹{payment.amount_paid.toLocaleString()}</p>
                     <p className={`text-xs font-medium ${getStatusColor(payment.status)}`}>{payment.status}</p>
                   </div>
                 </div>
               ))
-            ) : <div className="text-center py-8 text-gray-500"><DollarSign className="w-8 h-8 mx-auto" /><p>No recent payment transactions</p></div>}
+            ) : <div className="text-center py-8 text-gray-500 dark:text-gray-400"><DollarSign className="w-8 h-8 mx-auto" /><p>No recent payment transactions</p></div>}
           </div>
         </Card>
       </div>
 
       {Object.keys(metrics.paymentMethods).length > 0 && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><CreditCard className="w-5 h-5" />Payment Methods Used</h3>
+        <Card className="p-6 bg-white dark:bg-gray-800">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white"><CreditCard className="w-5 h-5" />Payment Methods Used</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {Object.entries(metrics.paymentMethods).map(([method, count]) => (
-              <div key={method} className="text-center p-3 bg-gray-50 rounded-lg">
-                <p className="font-bold text-lg">{count}</p>
-                <p className="text-sm text-gray-500">{method}</p>
+              <div key={method} className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <p className="font-bold text-lg text-gray-900 dark:text-white">{count}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{method}</p>
               </div>
             ))}
           </div>

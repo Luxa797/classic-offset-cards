@@ -1,25 +1,26 @@
 // src/components/invoices/InvoicePage.tsx
+
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabaseClient'; // உங்கள் Supabase கிளையன்ட் பாதை
-import InvoiceView from './InvoiceView'; // உங்கள் InvoiceView கூறின் பாதை
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { supabase } from '@/lib/supabaseClient'; 
+import InvoiceView from './InvoiceView';
 import { useReactToPrint } from 'react-to-print';
 import { Printer, MessageCircle, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
-import Button from '../ui/Button'; // உங்கள் Button கூறின் பாதை
-import Card from '../ui/Card'; // உங்கள் Card கூறின் பாதை
+import Button from '../ui/Button';
+import Card from '../ui/Card';
 
-// View-லிருந்து வரும் தரவிற்கான தெளிவான வகை வரையறை
+// OrderDetails வகை வரையறை
 interface OrderDetails {
   id: number;
   date: string;
   total_amount: number;
-  paid: number;   // View-லிருந்து நேரடியாகப் பெறப்படும்
-  balance: number; // View-லிருந்து நேரடியாகப் பெறப்படும்
-  customer_id: string; // ✅ Added customer_id field
+  paid: number;
+  balance: number;
+  customer_id: string; 
   customer: {
     name: string;
     phone: string;
-    address: string;
+    address: string | null;
   } | null;
 }
 
@@ -28,78 +29,66 @@ const InvoicePage: React.FC = () => {
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const invoiceRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+
+  const printableContentRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
-    content: () => invoiceRef.current,
-    documentTitle: `Invoice #${id}`,
-    pageStyle: `
-      @media print {
-        body { -webkit-print-color-adjust: exact; }
-        @page { size: A4; margin: 20mm; }
-      }
-    `,
+    content: () => printableContentRef.current,
+    documentTitle: `Invoice #${order?.id || id}`,
+    onBeforeGetContent: () => new Promise<void>((resolve) => setTimeout(resolve, 250)),
+    pageStyle: `@media print { body { -webkit-print-color-adjust: exact; } @page { size: A4; margin: 20mm; } }`,
   });
+
+  // WhatsApp Dashboard-க்கு அனுப்பும் ஃபங்ஷன்
+  const handleGoToWhatsAppDashboard = () => {
+    if (order && order.customer && order.customer.phone && order.id && order.customer_id) {
+      const params = new URLSearchParams({
+        orderId: order.id.toString(),
+        customerId: order.customer_id,
+        customerName: order.customer.name,
+      });
+      navigate(`/whatsapp?${params.toString()}`);
+    }
+  };
 
   useEffect(() => {
     if (!id) {
-        setError("Invoice ID not found in URL.");
-        setLoading(false);
-        return;
+      setError("URL-லில் இன்வாய்ஸ் ஐடி (ID) இல்லை.");
+      setLoading(false);
+      return;
     }
 
     const fetchInvoiceData = async () => {
       setLoading(true);
       setError(null);
-
       try {
-        // ✅ First query: Get order summary data including customer_id and customer_name
-        const { data: summaryData, error: viewError } = await supabase
-          .from('order_summary_with_dues')
-          .select(`
-            order_id,
-            date,
-            total_amount,
-            amount_paid,
-            balance_due,
-            customer_id,
-            customer_name
-          `)
+        const { data, error: viewError } = await supabase
+          .from('all_order_summary')
+          .select('order_id, order_date, total_amount, amount_paid, balance_due, customer_id, customer_name, customer_phone')
           .eq('order_id', id)
-          .single();
+          .single(); 
 
         if (viewError) throw viewError;
-        if (!summaryData) throw new Error(`Invoice with ID #${id} not found.`);
+        if (!data) throw new Error(`இன்வாய்ஸ் #${id} கிடைக்கவில்லை.`);
 
-        // ✅ Second query: Get full customer details separately
-        const { data: customerData, error: customerError } = await supabase
-          .from('customers')
-          .select('name, phone, address')
-          .eq('id', summaryData.customer_id)
-          .single();
-
-        if (customerError) {
-          console.warn("Could not fetch customer details:", customerError);
-        }
-
-        // ✅ Combine the results from both queries
         setOrder({
-          id: summaryData.order_id,
-          date: summaryData.date,
-          total_amount: summaryData.total_amount,
-          paid: summaryData.amount_paid,
-          balance: summaryData.balance_due,
-          customer_id: summaryData.customer_id,
-          customer: customerData || {
-            name: summaryData.customer_name || 'Unknown Customer',
-            phone: '',
-            address: ''
+          id: data.order_id,
+          date: data.order_date,
+          total_amount: data.total_amount,
+          paid: data.amount_paid,
+          balance: data.balance_due,
+          customer_id: data.customer_id,
+          customer: {
+            name: data.customer_name || 'தெரியாத வாடிக்கையாளர்',
+            phone: data.customer_phone || '',
+            address: null, // This can be fetched from customers table if needed
           },
         });
 
       } catch (err: any) {
-         console.error("Error fetching invoice data:", err);
-         setError(err.message || 'Failed to load invoice data. Please try again.');
+        console.error("இன்வாய்ஸ் தரவைப் பெறுவதில் பிழை:", err);
+        setError(err.message || 'இன்வாய்ஸ் தரவை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்.');
       } finally {
         setLoading(false);
       }
@@ -110,64 +99,58 @@ const InvoicePage: React.FC = () => {
 
   if (loading) {
     return (
-        <div className="flex flex-col justify-center items-center min-h-[calc(100vh-200px)]">
-            <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
-            <p className="mt-3 text-gray-600 dark:text-gray-400">Loading Invoice #{id}...</p>
-        </div>
+      <div className="flex flex-col justify-center items-center min-h-[calc(100vh-200px)]">
+        <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
+        <p className="mt-3 text-gray-600 dark:text-gray-400">இன்வாய்ஸ் #{id} ஏற்றப்படுகிறது...</p>
+      </div>
     );
   }
 
   if (error || !order) {
     return (
-        <Card className="p-6 m-4 bg-red-50 text-red-700 border border-red-300 text-center">
-            <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-red-500" />
-            <p className="font-semibold text-lg">Error Loading Invoice</p>
-            <p className="text-sm mb-4">{error || 'Invoice could not be found.'}</p>
-            <Link to="/invoices">
-                <Button variant="secondary" className="flex items-center mx-auto">
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to All Invoices
-                </Button>
-            </Link>
-        </Card>
+      <Card className="p-6 m-4 bg-red-50 text-red-700 border border-red-300 text-center">
+        <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-red-500" />
+        <p className="font-semibold text-lg">இன்வாய்ஸ் ஏற்றுவதில் பிழை</p>
+        <p className="text-sm mb-4">{error || 'இன்வாய்ஸ் கண்டுபிடிக்க முடியவில்லை.'}</p>
+        <Link to="/invoices">
+          <Button variant="secondary" className="flex items-center mx-auto">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            அனைத்து இன்வாய்ஸ்களுக்கும் திரும்புக
+          </Button>
+        </Link>
+      </Card>
     );
   }
-
-  const { customer } = order;
-  const whatsappMessage = `Hello ${customer?.name || ''},\n\nHere is a summary for your Invoice #${order.id}:\n\nTotal Amount: ₹${order.total_amount.toLocaleString()}\nAmount Paid: ₹${order.paid.toLocaleString()}\nBalance Due: ₹${order.balance.toLocaleString()}\n\nThank you!`;
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <div>
-            <Link to="/invoices" className="text-sm text-primary-600 hover:underline flex items-center mb-1">
-                <ArrowLeft className="w-4 h-4 mr-1" />
-                Back to All Invoices
-            </Link>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">🧾 Invoice #{order.id}</h1>
+          <Link to="/invoices" className="text-sm text-primary-600 hover:underline flex items-center mb-1">
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            அனைத்து இன்வாய்ஸ்களுக்கும் திரும்புக
+          </Link>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">🧾 இன்வாய்ஸ் #{order.id}</h1>
         </div>
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           <Button onClick={handlePrint} variant="secondary" className="w-1/2 sm:w-auto flex-1 sm:flex-none">
             <Printer className="w-4 h-4 mr-2" />
-            Print / Download
+            அச்சிடு / பதிவிறக்கு
           </Button>
-          <a
-            href={`https://wa.me/${customer?.phone?.replace(/\D/g, '') || ''}?text=${encodeURIComponent(
-              whatsappMessage
-            )}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-1/2 sm:w-auto flex-1 sm:flex-none"
+          <Button 
+            variant="success" 
+            className="w-1/2 sm:w-auto flex-1 sm:flex-none" 
+            onClick={handleGoToWhatsAppDashboard}
+            disabled={!order.customer?.phone}
           >
-            <Button variant="success" className="w-full" disabled={!customer?.phone}>
-              <MessageCircle className="w-4 h-4 mr-2" />
-              WhatsApp
-            </Button>
-          </a>
+            <MessageCircle className="w-4 h-4 mr-2" />
+            WhatsApp
+          </Button>
         </div>
       </div>
-      <div className="bg-white rounded-lg shadow-md p-2 sm:p-4">
-          <InvoiceView ref={invoiceRef} order={order} />
+      
+      <div ref={printableContentRef} className="bg-white rounded-lg shadow-md p-2 sm:p-4">
+        <InvoiceView order={order} />
       </div>
     </div>
   );

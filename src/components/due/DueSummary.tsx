@@ -2,20 +2,23 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import Card from '../ui/Card';
 import DueCard from './DueCard';
-import PrintButton from '../shared/PrintButton';
+// import PrintButton from '../shared/PrintButton'; // REMOVED: This file does not exist
+import Button from '../ui/Button'; // ADDED: Using the standard Button component
 import { useReactToPrint } from 'react-to-print';
 import { supabase } from '@/lib/supabaseClient';
-import { Loader2, AlertTriangle, PartyPopper, Banknote, Users, Package } from 'lucide-react';
+import { Loader2, AlertTriangle, PartyPopper, Banknote, Users, Package, Printer } from 'lucide-react'; // ADDED: Printer icon
 
 // Define the interface for the data that will be returned from the View
 export interface DueOrder {
   order_id: number;
   customer_name: string;
   balance_due: number;
-  date: string | null; // Changed from 'created_at' to 'date'
-  // Add other columns from order_summary_with_dues if needed in DueSummary
-  amount_paid?: number; // Added for consistency, though not directly used for summary stats here
-  total_amount?: number; // Added for consistency
+  date: string | null;
+  amount_paid?: number;
+  total_amount?: number;
+  // You can add other fields like order_type, delivery_date if they exist in the view and you need them in DueCard
+  order_type?: string;
+  delivery_date?: string;
 }
 
 const DueSummary: React.FC = () => {
@@ -82,7 +85,11 @@ const DueSummary: React.FC = () => {
           <p className="text-sm text-gray-500 dark:text-gray-400">Pending payments grouped by customer.</p>
         </div>
         <div className="no-print">
-            <PrintButton handlePrint={handlePrint} title="Export Due Summary" />
+            {/* UPDATED: Replaced the non-existent PrintButton with a standard Button */}
+            <Button onClick={handlePrint}>
+                <Printer className="mr-2 h-4 w-4" />
+                Export Due Summary
+            </Button>
         </div>
       </div>
 
@@ -95,12 +102,12 @@ const DueSummary: React.FC = () => {
                     <span className="text-xs text-gray-500">Total Due</span>
                     <span className="text-lg font-bold text-gray-800 dark:text-white">₹{summaryStats.totalDueOverall.toLocaleString('en-IN')}</span>
                 </div>
-                   <div className="flex flex-col items-center p-2">
+                  <div className="flex flex-col items-center p-2">
                     <Users className="w-6 h-6 mb-1 text-blue-500"/>
                     <span className="text-xs text-gray-500">Customers with Dues</span>
                     <span className="text-lg font-bold text-gray-800 dark:text-white">{summaryStats.totalCustomersWithDues}</span>
                 </div>
-                   <div className="flex flex-col items-center p-2">
+                  <div className="flex flex-col items-center p-2">
                     <Package className="w-6 h-6 mb-1 text-yellow-500"/>
                     <span className="text-xs text-gray-500">Pending Orders</span>
                     <span className="text-lg font-bold text-gray-800 dark:text-white">{summaryStats.totalPendingOrders}</span>

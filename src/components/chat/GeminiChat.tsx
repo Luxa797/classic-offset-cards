@@ -1,29 +1,26 @@
 /// <reference types="vite/client" />
 
-// src/components/chat/GeminiChat.tsx
 import React, { useState, FormEvent, useEffect, useRef } from 'react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { useUser } from '@/context/UserContext';
 import { Mic, Languages, Send, MicOff } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
-// --- TYPE DEFINITIONS for Speech Recognition ---
-// Extend the Window interface to include browser-specific speech recognition properties
+// --- TYPE DEFINITIONS ---
 interface CustomWindow extends Window {
   SpeechRecognition: typeof SpeechRecognition;
   webkitSpeechRecognition: typeof SpeechRecognition;
 }
 declare const window: CustomWindow;
 
-// Define the structure for the Speech Recognition Error Event
 interface SpeechRecognitionErrorEvent extends Event {
   error: string;
 }
 
-// --- Component Starts ---
 const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-// Define the structure of a single part of a conversation
 interface ContentPart {
   text: string;
 }
@@ -34,17 +31,16 @@ interface ConversationEntry {
 
 const FUNCTION_URL = "https://ytnsjmbhgwcuwmnflncl.supabase.co/functions/v1/custom-ai-agent";
 
-const askCustomAgent = async (
+const askClassicAI = async (
   history: ConversationEntry[],
   accessToken: string,
-  anonKey: string,
-  agentType: 'classic' | 'web' | 'image' | 'translate'
+  anonKey: string
 ): Promise<string> => {
   try {
     const response = await fetch(FUNCTION_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': anonKey, 'Authorization': `Bearer ${accessToken}` },
-      body: JSON.stringify({ history, agentType }),
+      body: JSON.stringify({ history }), // agentType is no longer needed
     });
     if (!response.ok) {
       const errorData = await response.json();
@@ -60,10 +56,9 @@ const askCustomAgent = async (
 
 interface GeminiChatProps {
   starterPrompt?: string;
-  agentType: 'classic' | 'web' | 'image';
 }
 
-const GeminiChat: React.FC<GeminiChatProps> = ({ starterPrompt = '', agentType }) => {
+const GeminiChat: React.FC<GeminiChatProps> = ({ starterPrompt = '' }) => {
   const [prompt, setPrompt] = useState<string>('');
   const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -73,11 +68,7 @@ const GeminiChat: React.FC<GeminiChatProps> = ({ starterPrompt = '', agentType }
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  const agentPlaceholders = {
-    classic: 'வாடிக்கையாளர், ஆர்டர்களைப் பற்றி கேட்கவும்...',
-    web: 'இணையத்தில் தேட எதையும் கேட்கவும்...',
-    image: 'உருவாக்க வேண்டிய படத்தின் விவரம்...',
-  };
+  const placeholderText = 'வாடிக்கையாளர், ஆர்டர்களைப் பற்றி கேட்கவும்...';
 
   useEffect(() => {
     if (starterPrompt) setPrompt(starterPrompt);
@@ -95,7 +86,6 @@ const GeminiChat: React.FC<GeminiChatProps> = ({ starterPrompt = '', agentType }
     recognition.lang = 'ta-IN';
     recognition.onstart = () => setIsListening(true);
     recognition.onend = () => setIsListening(false);
-    // Add explicit types to event handlers
     recognition.onerror = (e: SpeechRecognitionErrorEvent) => console.error("Speech recognition error", e.error);
     recognition.onresult = (e: SpeechRecognitionEvent) => setPrompt(e.results[0][0].transcript);
     recognitionRef.current = recognition;
@@ -112,7 +102,7 @@ const GeminiChat: React.FC<GeminiChatProps> = ({ starterPrompt = '', agentType }
     try {
       const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       if (!anonKey) throw new Error("VITE_SUPABASE_ANON_KEY is not set.");
-      const result = await askCustomAgent(updatedHistory, session.access_token, anonKey, agentType);
+      const result = await askClassicAI(updatedHistory, session.access_token, anonKey);
       setConversationHistory(prev => [...prev, { role: 'model', parts: [{ text: result }] }]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
@@ -131,31 +121,16 @@ const GeminiChat: React.FC<GeminiChatProps> = ({ starterPrompt = '', agentType }
     if (isListening) recognitionRef.current?.stop();
     else recognitionRef.current?.start();
   };
-
+  
   const handleTranslate = async () => {
-      // ... (Translation logic remains the same)
+      // Translation logic can be added here if needed in the future
   };
 
-  const renderContent = (text: string) => {
-    const base64ImageRegex = /data:image\/png;base64,([a-zA-Z0-9+/=]+)/;
-    const match = text.match(base64ImageRegex);
-
-    if (match) {
-        const imageUrl = match[0];
-        const caption = text.substring(0, match.index).trim();
-
-        return (
-            <div>
-                {caption && <p className="mb-2 text-gray-700 dark:text-gray-200">{caption}</p>}
-                <a href={imageUrl} target="_blank" rel="noopener noreferrer" title="Click to view full image">
-                    <img src={imageUrl} alt="Generated AI Image" className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity" />
-                </a>
-            </div>
-        );
-    }
-    
-    return <p className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap text-left">{text}</p>;
-  };
+  const renderContent = (text: string) => (
+    <div className="prose prose-sm dark:prose-invert max-w-none">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+    </div>
+  );
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm dark:bg-gray-800 flex flex-col h-full">
@@ -167,7 +142,7 @@ const GeminiChat: React.FC<GeminiChatProps> = ({ starterPrompt = '', agentType }
         )}
         {conversationHistory.map((entry, index) => (
           <div key={index} className={`mb-3 p-3 rounded-lg flex flex-col ${ entry.role === 'user' ? 'bg-indigo-50 dark:bg-indigo-900/40 items-end ml-auto' : 'bg-gray-100 dark:bg-gray-700/60 items-start' }`} style={{ maxWidth: '85%' }}>
-            <p className="font-bold text-sm capitalize text-gray-800 dark:text-gray-100 mb-1">{entry.role === 'model' ? `AI ${agentType}` : 'நீங்கள்'}</p>
+            <p className="font-bold text-sm capitalize text-gray-800 dark:text-gray-100 mb-1">{entry.role === 'model' ? `AI Classic` : 'நீங்கள்'}</p>
             {renderContent(entry.parts[0].text)}
           </div>
         ))}
@@ -180,7 +155,7 @@ const GeminiChat: React.FC<GeminiChatProps> = ({ starterPrompt = '', agentType }
       </div>
 
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
-        <Input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={isListening ? 'பேசுங்கள்...' : agentPlaceholders[agentType]} className="flex-grow" disabled={isLoading} aria-label="Ask the AI agent" />
+        <Input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={isListening ? 'பேசுங்கள்...' : placeholderText} className="flex-grow" disabled={isLoading} aria-label="Ask the AI agent" />
         
         <Button type="button" onClick={handleVoiceInputToggle} disabled={isLoading} variant="outline" className={`px-3 ${isListening ? 'text-red-500' : ''}`}>
           {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}

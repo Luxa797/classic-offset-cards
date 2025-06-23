@@ -4,15 +4,13 @@ import { Link } from 'react-router-dom';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
-import { Eye, Loader2, AlertTriangle, Search } from 'lucide-react';
+import { Eye, Loader2, AlertTriangle, Search, Phone } from 'lucide-react';
 
-// View-லிருந்து வரும் தரவிற்கான இடைமுகம்
+// View-லிருந்து வரும் தரவிற்கான இடைமுகம் புதுப்பிக்கப்பட்டது
 interface InvoiceRow {
   order_id: number;
   customer_name: string;
-  // customers அட்டவணையிலிருந்து phone எண்ணைப் பெற View-ஐ மாற்றியமைக்க வேண்டும்,
-  // அல்லது இங்கே தனி அழைப்பு தேவை. தற்போதைக்கு phone எண்ணை நீக்குகிறோம்.
-  // phone: string;
+  customer_phone: string; 
   total_amount: number;
   amount_paid: number;
   balance_due: number;
@@ -29,10 +27,9 @@ const InvoiceList: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        // ✅ முக்கிய மாற்றம்: order_summary_with_dues View-லிருந்து நேரடியாகத் தரவைப் பெறுகிறோம்
         const { data, error: viewError } = await supabase
-          .from('order_summary_with_dues')
-          .select('order_id, customer_name, total_amount, amount_paid, balance_due')
+          .from('all_order_summary')
+          .select('order_id, customer_name, customer_phone, total_amount, amount_paid, balance_due')
           .order('order_id', { ascending: false });
 
         if (viewError) throw viewError;
@@ -40,7 +37,8 @@ const InvoiceList: React.FC = () => {
         setInvoices(data || []);
       } catch (err: any) {
         console.error('Error fetching invoice data:', err);
-        setError(`Failed to load invoices. ${err.message}`);
+        // ✅ முக்கிய மாற்றம்: முழுப் பிழை விவரத்தையும் காட்டுகிறோம்
+        setError(`Failed to load invoices. Details: ${JSON.stringify(err, null, 2)}`);
       } finally {
         setLoading(false);
       }
@@ -53,6 +51,7 @@ const InvoiceList: React.FC = () => {
     const lowercasedTerm = searchTerm.toLowerCase();
     return invoices.filter(inv =>
       inv.customer_name?.toLowerCase().includes(lowercasedTerm) ||
+      inv.customer_phone?.includes(lowercasedTerm) || 
       String(inv.order_id).includes(lowercasedTerm)
     );
   }, [invoices, searchTerm]);
@@ -71,7 +70,8 @@ const InvoiceList: React.FC = () => {
       <Card className="p-6 m-4 bg-red-50 text-red-700 border border-red-300 text-center">
         <AlertTriangle className="w-10 h-10 mx-auto mb-2 text-red-500"/>
         <p className="font-semibold">Error Loading Data</p>
-        <p className="text-sm">{error}</p>
+        {/* பிழைச் செய்தியை அழகாகக் காட்ட <pre> டேக் பயன்படுத்துகிறோம் */}
+        <pre className="text-sm text-left whitespace-pre-wrap">{error}</pre>
       </Card>
     );
   }
@@ -89,7 +89,7 @@ const InvoiceList: React.FC = () => {
                 <Input
                     id="search-invoices"
                     type="search"
-                    placeholder="Search by Customer or Order ID..."
+                    placeholder="Search by Customer, Phone or Order ID..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10"
@@ -103,6 +103,7 @@ const InvoiceList: React.FC = () => {
               <tr className="text-left">
                 <th className="px-4 py-3 font-medium">Order ID</th>
                 <th className="px-4 py-3 font-medium">Customer</th>
+                <th className="px-4 py-3 font-medium">Phone</th>
                 <th className="px-4 py-3 font-medium">Total</th>
                 <th className="px-4 py-3 font-medium">Paid</th>
                 <th className="px-4 py-3 font-medium">Balance</th>
@@ -115,6 +116,7 @@ const InvoiceList: React.FC = () => {
                 <tr key={inv.order_id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-4 py-3">#{inv.order_id}</td>
                   <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">{inv.customer_name || '-'}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{inv.customer_phone || '-'}</td>
                   <td className="px-4 py-3">₹{inv.total_amount.toLocaleString('en-IN')}</td>
                   <td className="px-4 py-3 text-green-600">₹{inv.amount_paid.toLocaleString('en-IN')}</td>
                   <td className={`px-4 py-3 font-bold ${inv.balance_due > 0 ? 'text-red-600' : 'text-green-600'}`}>
@@ -139,7 +141,7 @@ const InvoiceList: React.FC = () => {
               ))}
               {filteredInvoices.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-gray-500 dark:text-gray-400">
+                  <td colSpan={8} className="text-center py-10 text-gray-500 dark:text-gray-400">
                     No invoices found.
                   </td>
                 </tr>

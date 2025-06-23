@@ -1,222 +1,288 @@
 // src/components/WhatsAppDashboard.tsx
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useUser } from '@/context/UserContext';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import Select from './ui/Select';
 import TextArea from './ui/TextArea';
-import { MessageCircle, Send, MessageSquare, History, Loader2, AlertTriangle, FileText, Users } from 'lucide-react';
+import { MessageCircle, Send, Loader2, AlertTriangle, MessageSquare } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
-// REMOVED: TemplateManager இனி இங்கே இறக்குமதி செய்யப்படாது
-// import TemplateManager from './whatsapp/TemplateManager';
 
-// Define types for your data
+// Data type definitions
 interface Customer { id: string; name: string; phone: string; }
-interface DueOrder { 
-  order_id: number; 
-  customer_id: string; 
-  customer_name: string; 
-  balance_due: number; 
-  total_amount: number; 
-  date: string; 
-  delivery_date: string; 
-  order_type: string; 
-  status?: string; 
-  amount_paid: number; 
+interface OrderSummary {
+  order_id: number;
+  customer_id: string;
+  customer_name: string;
+  customer_phone: string;
+  balance_due: number;
+  total_amount: number;
+  amount_paid: number;
+  order_date?: string;
+  delivery_date: string;
+  status?: string; // status ஐ இங்கே சேர்க்கவும்
 }
+interface OrderDetails {
+    quantity: number;
+    order_type: string;
+}
+interface PaymentHistory {
+    payment_date: string;
+    amount_paid: number;
+    payment_method: string;
+}
+interface FullOrderInfo extends OrderSummary, OrderDetails {}
+
 interface Template { id: string; name: string; category: string; body: string; }
 
-const SendMessageUI = ({ customers, dueOrders, templates, onRefresh }) => {
+// --- Child Component for Sending Messages ---
+const SendMessageUI = ({ allCustomers, templates, onRefresh, initialOrder }) => {
   const { user } = useUser();
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [selectedOrderId, setSelectedOrderId] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [message, setMessage] = useState('');
+  const [customerOrders, setCustomerOrders] = useState<OrderSummary[]>([]);
+  const [isFetchingData, setIsFetchingData] = useState(false);
+  
+  useEffect(() => {
+    if (initialOrder) {
+      setSelectedCustomerId(initialOrder.customer_id);
+      setCustomerOrders([initialOrder]);
+      setSelectedOrderId(String(initialOrder.order_id));
+      const invoiceTemplate = templates.find(t => t.name.toLowerCase().includes('full invoice details'));
+      if (invoiceTemplate) setSelectedTemplate(invoiceTemplate);
+    }
+  }, [initialOrder, templates]);
 
   useEffect(() => {
-    const customer = customers.find(c => c.id === selectedCustomerId);
-    const order = dueOrders.find(o => o.order_id === parseInt(selectedOrderId));
+    if (selectedCustomerId && !initialOrder) {
+      const fetchCustomerOrders = async () => {
+        setIsFetchingData(true);
+        setCustomerOrders([]);
+        setSelectedOrderId('');
+        setSelectedTemplate(null);
 
-    if (!selectedTemplate || !order || !customer) {
-        if (message && !selectedOrderId) setMessage('');
-        return;
+        const { data, error } = await supabase
+          .from('all_order_summary')
+          .select('*')
+          .eq('customer_id', selectedCustomerId)
+          .order('order_id', { ascending: false });
+
+        if (error) {
+          toast.error('Failed to fetch orders for customer.');
+        } else {
+          setCustomerOrders(data as OrderSummary[]);
+        }
+        setIsFetchingData(false);
+      };
+      fetchCustomerOrders();
     }
+  }, [selectedCustomerId, initialOrder]);
 
-    // Debugging logs (can remove after verification)
-    console.log('--- Debugging payment_amount ---');
-    console.log('Selected Order (from dueOrders):', order);
-    console.log('Order ID:', order.order_id);
-    console.log('Order amount_paid (from order object):', order.amount_paid);
-    console.log('Order delivery_date (from order object):', order.delivery_date);
+  useEffect(() => {
+    let isActive = true;
 
-    const paymentAmount = order.amount_paid || 0;
-    const pickupDate = order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('en-GB') : 'N/A';
+    const generateMessage = async () => {
+      const customer = allCustomers.find(c => c.id === selectedCustomerId);
+      const orderSummary = customerOrders.find(o => o.order_id === parseInt(selectedOrderId));
 
-    let finalMessage = selectedTemplate.body;
-    const variables = {
-        customer_name: customer.name,
-        order_id: String(order.order_id),
-        order_type: order.order_type,
-        total_amount: String(order.total_amount),
-        balance_due: String(order.balance_due),
-        delivery_date: new Date(order.delivery_date).toLocaleDateString('en-GB'),
-        shop_name: 'Classic Offset',
-        status: order.status || '',
-        payment_amount: String(paymentAmount),
-        pickup_date: pickupDate,
+      if (!selectedTemplate || !orderSummary || !customer) {
+        if (isActive) setMessage('');
+        return;
+      }
+
+      setIsFetchingData(true);
+      
+      const { data: orderDetailsData, error: orderDetailsError } = await supabase
+        .from('orders')
+        .select('quantity, order_type')
+        .eq('id', orderSummary.order_id)
+        .single();
+
+      const { data: paymentHistoryData, error: paymentHistoryError } = await supabase
+        .from('payments')
+        .select('payment_date, amount_paid, payment_method')
+        .eq('order_id', orderSummary.order_id)
+        .order('payment_date', { ascending: true });
+
+      if (!isActive) return;
+
+      if (orderDetailsError || paymentHistoryError) {
+        console.error("Order Details Error:", orderDetailsError);
+        console.error("Payment History Error:", paymentHistoryError);
+        toast.error("Failed to fetch full order details.");
+        setIsFetchingData(false);
+        return;
+      }
+      
+      const fullOrderInfo: FullOrderInfo = { ...orderSummary, ...orderDetailsData };
+
+      let historyText = 'இதுவரை பணம் எதுவும் செலுத்தப்படவில்லை';
+      if (paymentHistoryData && paymentHistoryData.length > 0) {
+        historyText = paymentHistoryData.map(p => 
+          `- ₹${p.amount_paid.toLocaleString('en-IN')} via ${p.payment_method} on ${new Date(p.payment_date).toLocaleDateString('en-GB')}`
+        ).join('\n');
+      }
+      
+      const invoiceLink = `${window.location.origin}/invoices/${fullOrderInfo.order_id}`;
+      
+      // SOLUTION: Combining logic from old and new code
+      const variables = {
+          customer_name: fullOrderInfo.customer_name,
+          order_id: String(fullOrderInfo.order_id),
+          order_type: fullOrderInfo.order_type,
+          total_amount: fullOrderInfo.total_amount.toLocaleString('en-IN'),
+          balance_due: fullOrderInfo.balance_due.toLocaleString('en-IN'),
+          delivery_date: fullOrderInfo.delivery_date ? new Date(fullOrderInfo.delivery_date).toLocaleDateString('en-GB') : 'N/A',
+          
+          // Variables from your old code logic, now added back
+          shop_name: 'Classic Offset', // ADDED
+          status: fullOrderInfo.status || 'Processing', // ADDED
+          payment_amount: fullOrderInfo.amount_paid.toLocaleString('en-IN'), // ADDED for templates like 'Payment Confirmation'
+          pickup_date: fullOrderInfo.delivery_date ? new Date(fullOrderInfo.delivery_date).toLocaleDateString('en-GB') : 'N/A', // ADDED
+
+          // Other useful variables from the new logic
+          quantity: String(fullOrderInfo.quantity),
+          amount_paid: fullOrderInfo.amount_paid.toLocaleString('en-IN'),
+          order_date: fullOrderInfo.order_date ? new Date(fullOrderInfo.order_date).toLocaleDateString('en-GB') : 'N/A',
+          invoice_link: invoiceLink,
+          payment_history: historyText,
+          customer_phone: fullOrderInfo.customer_phone,
+      };
+      
+      let finalMessage = selectedTemplate.body;
+      Object.entries(variables).forEach(([key, value]) => {
+        finalMessage = finalMessage.replace(new RegExp(`{{${key}}}`, 'g'), String(value || ''));
+      });
+
+      if (isActive) {
+        setMessage(finalMessage);
+        setIsFetchingData(false);
+      }
     };
 
-    Object.entries(variables).forEach(([key, value]) => {
-        finalMessage = finalMessage.replace(new RegExp(`{{${key}}}`, 'g'), value || '');
-    });
-    setMessage(finalMessage);
-  }, [selectedCustomerId, selectedOrderId, selectedTemplate, customers, dueOrders]);
+    generateMessage();
+
+    return () => {
+      isActive = false;
+    };
+
+  }, [selectedOrderId, selectedTemplate, selectedCustomerId, customerOrders, allCustomers]);
 
   const handleSend = async () => {
-    const customer = customers.find(c => c.id === selectedCustomerId);
-    if (!customer || !customer.phone || !message) {
-      return toast.error('Please select a customer and ensure message is not empty.');
-    }
-
+    const customer = allCustomers.find(c => c.id === selectedCustomerId);
+    if (!customer?.phone || !message) return toast.error('Customer phone or message is missing.');
     const cleanPhone = customer.phone.replace(/\D/g, '');
-    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
-
-    const { error } = await supabase.from('whatsapp_log').insert({
-        customer_id: customer.id,
-        customer_name: customer.name,
-        phone: customer.phone,
-        message: message,
-        template_name: selectedTemplate?.name,
-        sent_by: user?.id,
-    });
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
     
-    if (error) {
-      toast.error(error.message);
-    } else {
-        toast.success("Message sent and logged!");
-        onRefresh();
-    }
+    const { error } = await supabase.from('whatsapp_log').insert({
+      customer_id: customer.id, customer_name: customer.name, phone: customer.phone,
+      message, template_name: selectedTemplate?.name, sent_by: user?.id,
+    });
+    if (error) toast.error(`Log failed: ${error.message}`);
+    else { toast.success("Message sent and logged!"); onRefresh(); }
   };
-  
-  const filteredOrders = dueOrders.filter(o => o.customer_id === selectedCustomerId);
 
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <Card title="Compose Message">
-                <div className="p-5 space-y-4">
-                    <Select label="1. Select Customer" options={customers.map(c => ({value: c.id, label: `${c.name} (${c.phone})`}))} value={selectedCustomerId} onChange={(e) => {setSelectedCustomerId(e.target.value); setSelectedOrderId(''); setSelectedTemplate(null);}} placeholder="Choose a customer" />
-                    <Select label="2. Select Order (for template data)" options={filteredOrders.map(o => ({value: o.order_id, label: `#${o.order_id} - ${o.order_type} (Due: ₹${o.balance_due})`}))} value={selectedOrderId} onChange={(e) => setSelectedOrderId(e.target.value)} disabled={!selectedCustomerId} placeholder="Choose an order"/>
-                    <Select label="3. Select Message Template" options={templates.map(t => ({value: t.name, label: t.name}))} value={selectedTemplate?.name || ''} onChange={(e) => setSelectedTemplate(templates.find(t => t.name === e.target.value) || null)} disabled={!selectedOrderId} placeholder="Choose a template"/>
-                    
-                    <TextArea label="4. Review and Send" value={message} onChange={(e) => setMessage(e.target.value)} rows={7} placeholder="Message will be generated here..."/>
+  const getOrderLabel = (order: OrderSummary) => {
+    let label = `#${order.order_id} - ${order.order_type} (Due: ₹${order.balance_due.toLocaleString('en-IN')})`;
+    return label;
+  }
 
-                    <Button onClick={handleSend} fullWidth variant="success" disabled={!message}>
-                        <Send className="w-4 h-4 mr-2"/> Send on WhatsApp
-                    </Button>
-                </div>
-            </Card>
-        </div>
-    );
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        <Card title="Compose Message">
+            <div className="p-5 space-y-4">
+                <Select label="1. Select Customer" options={allCustomers.map(c => ({value: c.id, label: `${c.name} (${c.phone})`}))} value={selectedCustomerId} onChange={(e) => setSelectedCustomerId(e.target.value)} placeholder="Choose a customer" />
+                <Select label="2. Select Order" options={customerOrders.map(o => ({value: o.order_id, label: getOrderLabel(o)}))} value={selectedOrderId} onChange={(e) => setSelectedOrderId(e.target.value)} disabled={!selectedCustomerId || isFetchingData} placeholder={isFetchingData ? "Loading orders..." : "Choose an order"}/>
+                <Select label="3. Select Template" options={templates.map(t => ({value: t.name, label: t.name}))} value={selectedTemplate?.name || ''} onChange={(e) => setSelectedTemplate(templates.find(t => t.name === e.target.value) || null)} disabled={!selectedOrderId} placeholder="Choose a template"/>
+                <TextArea label="4. Review Message" value={message} onChange={(e) => setMessage(e.target.value)} rows={12} placeholder="Message will be generated here..." disabled={isFetchingData}/>
+                <Button onClick={handleSend} fullWidth variant="success" disabled={!message || isFetchingData}><Send className="w-4 h-4 mr-2"/> Send on WhatsApp</Button>
+            </div>
+        </Card>
+        <Card title="Message Preview">
+          <div className="p-5 min-h-[300px] bg-gray-50 dark:bg-gray-800 rounded-b-lg">
+            {isFetchingData ? <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin" /></div> : <pre className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap font-sans">{message || "Select customer, order, and template for preview."}</pre>}
+          </div>
+        </Card>
+    </div>
+  );
 };
 
+// --- Main Dashboard Component ---
 const WhatsAppDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'send'>('send'); // UPDATED: 'templates' tab நீக்கப்பட்டது
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [dueOrders, setDueOrders] = useState<DueOrder[]>([]);
-  const [templates, setTemplates] = useState<Template[]>([]); // templates state ஐ வைத்திருத்தல்
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [initialOrder, setInitialOrder] = useState<OrderSummary | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const fetchAllData = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [customersRes, dueOrdersRes, templatesRes] = await Promise.all([
+      const params = new URLSearchParams(location.search);
+      const orderIdFromUrl = params.get('orderId');
+
+      const [customersRes, templatesRes, dueOrdersRes] = await Promise.all([
         supabase.from('customers').select('id, name, phone').order('name'),
-        supabase.from('order_summary_with_dues').select('*').gt('balance_due', 0),
-        supabase.from('whatsapp_templates').select('*').order('name') // templates ஐப் பெறுதல் தொடரும்
+        supabase.from('whatsapp_templates').select('*').order('name'),
+        supabase.from('all_order_summary').select('*').gt('balance_due', 0) // Fetch all due orders initially
       ]);
+      
+      const errors = [customersRes.error, templatesRes.error, dueOrdersRes.error].filter(Boolean);
+      if (errors.length > 0) throw errors[0];
 
-      const errors = [customersRes.error, dueOrdersRes.error, templatesRes.error].filter(Boolean);
-      if(errors.length > 0) throw errors[0];
-
-      setCustomers(customersRes.data || []);
-      setDueOrders(dueOrdersRes.data || []);
+      setAllCustomers(customersRes.data || []);
       setTemplates(templatesRes.data || []);
 
+      if (orderIdFromUrl) {
+        const { data: orderData, error: orderError } = await supabase
+          .from('all_order_summary').select('*').eq('order_id', orderIdFromUrl).single();
+        if (orderError) throw orderError;
+        setInitialOrder(orderData as OrderSummary);
+        // We set the initial order, and the UI components will handle the state.
+        navigate(location.pathname, { replace: true });
+      } else {
+        setInitialOrder(null);
+      }
     } catch(err: any) {
-        toast.error(err.message || "Failed to load initial data.");
-        setError(err.message);
+      toast.error(err.message || "Failed to load dashboard data.");
+      setError(err.message);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-  }, []);
+  }, [location.search, navigate]);
 
   useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData, refreshKey]);
+    fetchData();
+  }, [fetchData, refreshKey]);
 
-  const renderContent = () => {
-    if (loading) return <div className="text-center p-8"><Loader2 className="w-8 h-8 animate-spin mx-auto"/></div>
-    if (error) return <div className="p-4 bg-red-50 text-red-600 rounded-md">{error}</div>
-
-    switch(activeTab) {
-        case 'send':
-            return <SendMessageUI customers={customers} dueOrders={dueOrders} templates={templates} onRefresh={() => setRefreshKey(k => k + 1)} />;
-        // REMOVED: 'templates' case இனி இங்கே இருக்காது
-        // case 'templates':
-        //     return <TemplateManager initialTemplates={templates} onDataChange={() => setRefreshKey(k => k + 1)} />;
-        default:
-            return null;
-    }
-  }
-
-  // UPDATED: 'templates' tab நீக்கப்பட்டது
-  const tabs = [
-    { id: 'send', label: 'Send Message', icon: Send },
-    // { id: 'templates', label: 'Template Manager', icon: FileText },
-  ];
+  if (loading) return <div className="text-center p-8"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary-500"/></div>;
+  if (error) return <Card className="m-4"><div className="p-4 bg-red-50 text-red-700 rounded-md"><AlertTriangle className="inline w-5 mr-2"/> {error}</div></Card>;
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <Toaster position="top-right" />
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
-            <MessageSquare size={28} className="text-green-500" /> 
-            WhatsApp Suite
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Send messages and manage templates.</p>
+      <div className="flex items-center gap-3">
+        <MessageSquare size={28} className="text-green-500" />
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">WhatsApp Suite</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Send personalized messages to your customers.</p>
+        </div>
       </div>
-
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="-mb-px flex space-x-6 overflow-x-auto">
-            {tabs.map(tab => {
-                const Icon = tab.icon;
-                return (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex items-center gap-2 px-1 py-3 text-sm font-medium whitespace-nowrap border-b-2
-                        ${activeTab === tab.id
-                            ? 'border-primary-600 text-primary-600 dark:text-primary-400'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                    >
-                        <Icon size={16} />
-                        {tab.label}
-                    </button>
-                )
-            })}
-        </nav>
-      </div>
-
-      <div className="mt-6">
-        {renderContent()}
-      </div>
+      <SendMessageUI 
+        allCustomers={allCustomers} 
+        templates={templates} 
+        initialOrder={initialOrder} 
+        onRefresh={() => setRefreshKey(k => k + 1)} 
+      />
     </div>
   );
 };

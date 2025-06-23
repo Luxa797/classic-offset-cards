@@ -1,33 +1,108 @@
-// src/components/customers/CustomerFormModal.tsx (இது ஒருவேளை நீங்கள் ஏற்கனவே வைத்திருக்கும் மோடல்)
-import React from 'react';
+// src/components/customers/CustomerFormModal.tsx
+import React, { useState } from 'react';
 import Modal from '../ui/Modal';
-import CustomerForm from './CustomerForm'; // Import the CustomerForm component
+import Input from '../ui/Input';
+import Button from '../ui/Button';
+import { supabase } from '@/lib/supabaseClient';
+import toast from 'react-hot-toast';
+import { Loader2 } from 'lucide-react';
 
+// Define the shape of a Customer
 interface Customer {
-  id?: string;
+  id: string;
   name: string;
   phone: string;
-  email?: string;
-  address?: string; // Add address
-  joined_date?: string; // Add joined_date
 }
 
+// Define the props for the modal
 interface CustomerFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: () => void;
-  editingCustomer?: Customer | null;
+  onSuccess: (newCustomer: Customer) => void;
 }
 
-const CustomerFormModal: React.FC<CustomerFormModalProps> = ({ isOpen, onClose, onSave, editingCustomer }) => {
+const CustomerFormModal: React.FC<CustomerFormModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    
+    // Basic validation
+    if (!name.trim() || !phone.trim()) {
+      setError('Both name and phone number are required.');
+      toast.error('Name and phone cannot be empty.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Insert into the 'customers' table without the 'created_by' field
+      const { data, error: insertError } = await supabase
+        .from('customers')
+        .insert({ name, phone })
+        .select()
+        .single();
+      
+      if (insertError) {
+        throw insertError;
+      }
+
+      toast.success(`Customer "${name}" was added successfully!`);
+      onSuccess(data as Customer); // Pass the newly created customer to the parent
+      onClose(); // Close the modal
+      
+      // Reset form for next time
+      setName('');
+      setPhone('');
+
+    } catch (err: any) {
+      console.error('Error adding customer:', err);
+      toast.error(err.message || 'An unexpected error occurred.');
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingCustomer ? 'Edit Customer' : 'Add New Customer'} size="md">
-      {/* CustomerForm கூறு உள்ளே பயன்படுத்தப்படுகிறது */}
-      <CustomerForm 
-        selectedCustomer={editingCustomer}
-        onSave={onSave}
-        onCancel={onClose} // Modal ஐ மூட onCancel ஐப் பயன்படுத்துதல்
-      />
+    <Modal isOpen={isOpen} onClose={onClose} title="Add a New Customer">
+      <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        {error && <p className="text-red-500 text-sm bg-red-50 p-2 rounded">{error}</p>}
+        
+        <Input
+          id="name"
+          label="Customer Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Enter the customer's full name"
+          required
+        />
+
+        <Input
+          id="phone"
+          label="Phone Number"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Enter a 10-digit phone number"
+          required
+        />
+
+        <div className="flex justify-end gap-2 pt-4">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" disabled={loading}>
+            {loading ? <Loader2 className="animate-spin mr-2" /> : null}
+            {loading ? 'Saving...' : 'Save Customer'}
+          </Button>
+        </div>
+      </form>
     </Modal>
   );
 };

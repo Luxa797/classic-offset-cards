@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, FileText, DollarSign, Package, Users, UserCircle,
   AlertCircle, ActivitySquare, FileSignature, Boxes, X,
-  Briefcase, BarChart3, ChevronDown, MessageCircle, Settings, MessageSquare, Sparkles
+  Briefcase, BarChart3, ChevronDown, MessageCircle, Settings, MessageSquare, Sparkles, Lightbulb
 } from 'lucide-react';
+import { twMerge } from 'tailwind-merge';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -25,13 +26,14 @@ interface NavGroup {
   items: NavItem[];
 }
 
-// AI Agent-ஐ Communication பிரிவில் சேர்க்கவும்
 const navGroups: NavGroup[] = [
   {
     name: 'Overview',
     icon: <BarChart3 size={20} />,
     items: [
       { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={18} /> },
+      { name: 'Insights', path: '/insights', icon: <Lightbulb size={18} /> },
+      { name: 'Reports', path: '/reports', icon: <BarChart3 size={18} /> }, // Added Reports link
       { name: 'Status Overview', path: '/status-overview', icon: <ActivitySquare size={18} /> },
       { name: 'Due Summary', path: '/due-summary', icon: <AlertCircle size={18} /> },
     ],
@@ -65,7 +67,7 @@ const navGroups: NavGroup[] = [
     items: [
       { name: 'WhatsApp Dashboard', path: '/whatsapp', icon: <MessageCircle size={18} /> },
       { name: 'Team Chat', path: '/team-chat', icon: <MessageSquare size={18} /> },
-      { name: 'AI Agent', path: '/ai-agent', icon: <Sparkles size={18} /> }, // புதிய இணைப்பு
+      { name: 'AI Agent', path: '/ai-agent', icon: <Sparkles size={18} /> },
     ],
   },
 ];
@@ -79,6 +81,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         ? prev.filter(name => name !== groupName)
         : [...prev, groupName]
     );
+  };
+  
+  const handleLinkClick = () => {
+      onClose();
   };
 
   return (
@@ -124,14 +130,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                       <NavLink
                         key={item.path}
                         to={item.path}
-                        onClick={onClose}
-                        className={({ isActive }) => `
-                          flex items-center px-3 py-2 my-1 rounded-lg text-sm
-                          transition-colors duration-200
-                          ${isActive
+                        onClick={handleLinkClick}
+                        className={({ isActive }) => twMerge(
+                          'flex items-center px-3 py-2 my-1 rounded-lg text-sm transition-colors duration-200',
+                          isActive
                             ? 'bg-primary-50 text-primary-600 font-semibold dark:bg-primary-900/50 dark:text-primary-300'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50'}`
-                        }
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                        )}
                       >
                         <span className="mr-3">{item.icon}</span>
                         <span>{item.name}</span>

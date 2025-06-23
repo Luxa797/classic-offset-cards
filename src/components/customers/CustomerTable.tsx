@@ -119,7 +119,6 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onAdd, onEdit, onDataChan
       setShowDeleteModal(false);
       setCustomerToDelete(null);
     } catch (err: any) {
-      // ✅ FIX: Use err.message to display a meaningful error string
       toast.error(`Failed to delete customer: ${err.message}`);
     } finally {
       setLoading(false);
@@ -132,24 +131,24 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onAdd, onEdit, onDataChan
         setSortField(field);
         setSortOrder(prev => (sortField === field && prev === 'asc' ? 'desc' : 'asc'));
       }}
-      className="flex items-center gap-1 hover:text-primary-600"
+      className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
     >
       {children}
-      <ArrowUpDown size={14} className={sortField === field ? 'text-primary-600' : 'text-gray-400'} />
+      <ArrowUpDown size={14} className={sortField === field ? 'text-primary' : ''} />
     </button>
   );
 
   return (
     <Card>
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-4">
+      <div className="p-4 border-b space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="relative w-full sm:w-1/3">
-            <Search className="w-4 h-4 text-gray-400 absolute top-1/2 left-3 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2" />
             <Input id="search-customers" placeholder="Search by name, phone, or email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
           </div>
           <div className="flex items-center gap-2">
             <ImportExportCustomers />
-            <Button onClick={onAdd} variant="primary" size="sm" className="w-full sm:w-auto">
+            <Button onClick={onAdd} size="sm" className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" /> Add New Customer
             </Button>
           </div>
@@ -163,47 +162,47 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onAdd, onEdit, onDataChan
       </div>
 
       {loading ? (
-        <div className="flex justify-center items-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary-500" /><span className="ml-2">Loading customers...</span></div>
+        <div className="flex justify-center items-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /><span className="ml-2 text-muted-foreground">Loading customers...</span></div>
       ) : error ? (
-        <div className="p-6 bg-red-50 text-red-700 text-center"><AlertTriangle className="w-10 h-10 mx-auto mb-2" /><p className="font-semibold">Error Loading Customers</p><p className="text-sm">{error}</p></div>
+        <div className="p-6 bg-destructive/10 text-destructive text-center"><AlertTriangle className="w-10 h-10 mx-auto mb-2" /><p className="font-semibold">Error Loading Customers</p><p className="text-sm">{error}</p></div>
       ) : customers.length === 0 ? (
-        <div className="text-center py-12 text-gray-500"><UserPlus className="w-12 h-12 mx-auto mb-4 opacity-50" /><p className="font-semibold text-lg">No customers found.</p><p className="text-sm">Try adjusting your filters or add a new customer.</p></div>
+        <div className="text-center py-12 text-muted-foreground"><UserPlus className="w-12 h-12 mx-auto mb-4 opacity-50" /><p className="font-semibold text-lg">No customers found.</p><p className="text-sm">Try adjusting your filters or add a new customer.</p></div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full text-sm">
+            <thead className="bg-muted">
               <tr>
-                <th className="px-4 py-3 text-left font-medium"><SortButton field="name">Customer</SortButton></th>
-                <th className="px-4 py-3 text-left font-medium">Contact</th>
-                <th className="px-4 py-3 text-left font-medium">Tags</th>
-                <th className="px-4 py-3 text-right font-medium"><SortButton field="total_orders">Orders</SortButton></th>
-                <th className="px-4 py-3 text-right font-medium"><SortButton field="balance_due">Balance Due</SortButton></th>
-                <th className="px-4 py-3 text-left font-medium"><SortButton field="joined_date">Joined</SortButton></th>
-                <th className="px-4 py-3 text-center font-medium">Actions</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground"><SortButton field="name">Customer</SortButton></th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Contact</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tags</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground"><SortButton field="total_orders">Orders</SortButton></th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground"><SortButton field="balance_due">Balance Due</SortButton></th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground"><SortButton field="joined_date">Joined</SortButton></th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y">
               {customers.map((customer) => (
                 <tr key={customer.id}>
-                  <td className="px-4 py-3 font-medium text-gray-900 flex items-center gap-2">
+                  <td className="px-4 py-3 font-medium text-foreground flex items-center gap-2">
                     {customer.total_paid > 10000 && <Star size={14} className="text-yellow-500 fill-current" title="Premium Customer"/>}
                     {customer.name}
                   </td>
-                  <td className="px-4 py-3 text-gray-700"><div>{customer.phone}</div><div className="text-xs text-gray-500">{customer.email}</div></td>
+                  <td className="px-4 py-3 text-muted-foreground"><div>{customer.phone}</div><div className="text-xs">{customer.email}</div></td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {customer.tags?.map(tag => <span key={tag} className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">{tag}</span>)}
+                      {customer.tags?.map(tag => <span key={tag} className="px-2 py-0.5 text-xs rounded-full bg-secondary text-secondary-foreground">{tag}</span>)}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right">{customer.total_orders || 0}</td>
+                  <td className="px-4 py-3 text-right text-foreground">{customer.total_orders || 0}</td>
                   <td className={`px-4 py-3 text-right font-bold ${customer.balance_due > 0 ? 'text-red-600' : 'text-green-600'}`}>
                     ₹{(customer.balance_due || 0).toLocaleString('en-IN')}
                   </td>
-                  <td className="px-4 py-3">{new Date(customer.joined_date).toLocaleDateString('en-GB')}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{new Date(customer.joined_date).toLocaleDateString('en-GB')}</td>
                   <td className="px-4 py-3 text-center space-x-1">
                     <Button variant="ghost" size="sm" title="View Details" onClick={() => setSelectedCustomerForDetails(customer)}><Eye size={16} /></Button>
                     <Button variant="ghost" size="sm" title="Edit Customer" onClick={() => onEdit(customer)}><Edit size={16} /></Button>
-                    <Button variant="ghost" size="sm" title="Delete Customer" onClick={() => handleDeleteCustomer(customer)}><Trash2 size={16} className="text-red-500" /></Button>
+                    <Button variant="ghost" size="sm" title="Delete Customer" onClick={() => handleDeleteCustomer(customer)}><Trash2 size={16} className="text-destructive" /></Button>
                   </td>
                 </tr>
               ))}
@@ -214,7 +213,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onAdd, onEdit, onDataChan
 
       {totalPages > 0 && (
         <div className="flex justify-between items-center p-4 border-t">
-           <span className="text-sm text-gray-700">Page {currentPage} of {totalPages} ({totalCustomers} total)</span>
+           <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages} ({totalCustomers} total)</span>
           <div className="flex items-center gap-2">
             <Button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} variant="outline" size="sm"><ChevronLeft size={16} /> Prev</Button>
             <Button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage >= totalPages} variant="outline" size="sm">Next <ChevronRight size={16} /></Button>

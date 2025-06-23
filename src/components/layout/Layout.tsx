@@ -1,78 +1,94 @@
 // src/components/layout/Layout.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
 import { useTheme } from '@/lib/ThemeProvider';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-// பக்கம் மாறும்போது மேலே ஸ்க்ரோல் செய்ய
 const ScrollToTop: React.FC = () => {
   const { pathname } = useLocation();
   useEffect(() => {
-    document.querySelector('.main-content')?.scrollTo(0, 0);
+    // Ensure the main content area scrolls to the top on navigation
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+      mainContent.scrollTo(0, 0);
+    }
   }, [pathname]);
   return null;
 };
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  // State for mobile sidebar visibility (acts as an overlay)
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // State for desktop sidebar collapsed state
+  const [isDockCollapsed, setIsDockCollapsed] = useState(false);
   const { theme } = useTheme();
+  
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
-  // பெரிய திரைகளுக்கு பக்கப் பட்டியை தானாகத் திறக்கவும்
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setSidebarOpen(true);
-      } else {
-        setSidebarOpen(false);
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    handleResize(); // ஆரம்பத்தில் சரிபார்க்க
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  // Close mobile sidebar when clicking outside of it
+  useClickOutside(sidebarRef, () => {
+    if (sidebarOpen) {
+      setSidebarOpen(false);
+    }
+  });
 
   return (
     <div className={`min-h-screen flex bg-gray-100 dark:bg-gray-900 ${theme === 'dark' ? 'dark' : ''}`}>
       <ScrollToTop />
       
-      {/* Sidebar for Desktop */}
+      {/* --- Desktop Sidebar (Permanent) --- */}
+      {/* Hidden on screens smaller than 1024px (lg) */}
       <div className="hidden lg:flex lg:flex-shrink-0">
-          <Sidebar isOpen={true} onClose={() => {}} />
+          <Sidebar 
+            isDocked={true}
+            isCollapsed={isDockCollapsed}
+            setIsCollapsed={setIsDockCollapsed}
+            onClose={() => {}} // Not needed for docked sidebar
+          />
       </div>
 
-      {/* Sidebar for Mobile (Slide-over) */}
+      {/* --- Mobile Sidebar (Overlay with Backdrop) --- */}
       <AnimatePresence>
         {sidebarOpen && (
           <>
-            {/* Overlay */}
+            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+              aria-hidden="true"
               onClick={() => setSidebarOpen(false)}
-              className="fixed inset-0 bg-black/60 z-30 lg:hidden"
             />
-            {/* Mobile Sidebar Content */}
+          
+            {/* Sidebar */}
             <motion.div
+              ref={sidebarRef}
+              key="mobile-sidebar"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               className="fixed inset-y-0 left-0 z-40 lg:hidden"
             >
-              <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+              <Sidebar 
+                isDocked={false}
+                isCollapsed={false}
+                onClose={() => setSidebarOpen(false)}
+              />
             </motion.div>
           </>
         )}
       </AnimatePresence>
 
-      {/* Main Content Area */}
+      {/* --- Main Content Area --- */}
       <div className="flex-1 flex flex-col min-w-0">
         <TopHeader onMenuClick={() => setSidebarOpen(true)} />
         
@@ -83,7 +99,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 key={useLocation().pathname}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                transition={{ duration: 0.4, ease: 'easeInOut' }}
               >
                 {children}
               </motion.div>

@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebaseClient';
 import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import timeAgo from '@/lib/timeAgo';
-import Card from '@/components/ui/Card'; // ✅ சரிசெய்யப்பட்ட இறக்குமதி
+import Card from '@/components/ui/Card';
 import { List, Activity, User, Clock } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface ActivityLog {
   id: string;
@@ -12,6 +13,29 @@ interface ActivityLog {
   user: string;
   timestamp: any;
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      type: 'spring',
+      stiffness: 100,
+    },
+  },
+};
+
 
 const ActivityLogFeed: React.FC = () => {
   const [activities, setActivities] = useState<ActivityLog[]>([]);
@@ -50,9 +74,18 @@ const ActivityLogFeed: React.FC = () => {
         {activities.length === 0 ? (
           <p className="p-4 text-center text-gray-500">No recent activities.</p>
         ) : (
-          <ul className="space-y-3">
+          <motion.ul 
+            className="space-y-3"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
             {activities.map(activity => (
-              <li key={activity.id} className="flex items-start gap-3 p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50">
+              <motion.li 
+                key={activity.id} 
+                className="flex items-start gap-3 p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                variants={itemVariants}
+              >
                 <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded-full">
                     <Activity size={16} className="text-gray-500"/>
                 </div>
@@ -63,9 +96,9 @@ const ActivityLogFeed: React.FC = () => {
                         <div className="flex items-center gap-1.5"><Clock size={12}/> {activity.timestamp ? timeAgo(activity.timestamp.toDate()) : 'just now'}</div>
                     </div>
                 </div>
-              </li>
+              </motion.li>
             ))}
-          </ul>
+          </motion.ul>
         )}
       </div>
     </Card>
