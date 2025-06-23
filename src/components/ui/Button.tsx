@@ -21,13 +21,13 @@ const Button: React.FC<ButtonProps> = ({
   const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 disabled:opacity-60 disabled:cursor-not-allowed';
   
   const variantStyles = {
-    primary: 'bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500 shadow-sm',
-    secondary: 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 focus-visible:ring-gray-500',
-    outline: 'border border-gray-300 text-gray-800 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700 focus-visible:ring-primary-500',
-    ghost: 'text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700 focus-visible:ring-primary-500',
-    destructive: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500',
-    success: 'bg-green-600 text-white hover:bg-green-700 focus-visible:ring-green-500',
-    link: 'text-primary-600 hover:text-primary-700 underline-offset-4 hover:underline dark:text-primary-400 dark:hover:text-primary-300',
+    primary: 'bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-primary',
+    secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 focus-visible:ring-secondary',
+    outline: 'border border-input text-foreground hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring',
+    ghost: 'text-foreground hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring',
+    destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive',
+    success: 'bg-green-600 text-white hover:bg-green-700 focus-visible:ring-green-500', // Assuming you want to keep success color as is
+    link: 'text-primary hover:underline focus-visible:ring-primary',
   };
   
   const sizeStyles = {
