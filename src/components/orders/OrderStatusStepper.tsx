@@ -31,12 +31,12 @@ const OrderStatusStepper: React.FC<Props> = ({ currentStatus }) => {
               <div className={`
                 w-10 h-10 flex items-center justify-center rounded-full border-2 transition-all duration-300 transform
                 ${isCompleted ? 'bg-green-500 border-green-500 text-white' :
-                  isActive ? 'bg-primary-500 border-primary-500 text-white scale-110 shadow-lg' :
+                  isActive ? 'bg-primary border-primary text-primary-foreground scale-110 shadow-lg' :
                   'bg-gray-100 border-gray-300 text-gray-400 dark:bg-gray-700 dark:border-gray-600'}`
               }>
                 <Icon size={isCompleted ? 20 : 18} />
               </div>
-              <p className={`mt-2 text-xs font-medium transition-colors ${isActive ? 'text-primary-600 dark:text-primary-300' : 'text-gray-500 dark:text-gray-400'}`}>
+              <p className={`mt-2 text-xs font-medium transition-colors ${isActive ? 'text-primary' : 'text-gray-500 dark:text-gray-400'}`}>
                 {step}
               </p>
             </div>
