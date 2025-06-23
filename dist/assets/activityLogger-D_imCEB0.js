@@ -1,0 +1,1 @@
+import{a1 as r,T as i,Y as s,a2 as c}from"./index-DM-CIWAp.js";const l=async(a,t)=>{try{await r(i(s,"activity_logs"),{message:a,user:t,timestamp:c()})}catch(o){console.error("Error logging activity:",o)}};export{l};
