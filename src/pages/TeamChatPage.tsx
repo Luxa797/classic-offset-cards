@@ -8,6 +8,8 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import calendar from 'dayjs/plugin/calendar';
 import AddChatRoomModal from '@/components/chat/AddChatRoomModal';
+import Input from '@/components/ui/Input'; // Import Input component
+import Button from '@/components/ui/Button'; // Import Button component
 
 dayjs.extend(relativeTime);
 dayjs.extend(calendar);
@@ -144,7 +146,7 @@ const TeamChatPage: React.FC = () => {
           <div className="p-4 border-b dark:border-zinc-700 flex justify-between items-center">
             <h2 className="text-xl font-bold">Chat Rooms</h2>
             <button onClick={() => setIsModalOpen(true)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-700" title="Start new chat">
-              <PlusCircle className="w-6 h-6 text-primary-600" />
+              <PlusCircle className="w-6 h-6 text-primary" />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto">
@@ -185,7 +187,7 @@ const TeamChatPage: React.FC = () => {
                       const isCurrentUser = msg.userId === user?.id;
                       return (
                         <div key={msg.id} className={`flex items-end gap-2 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-md lg:max-w-lg p-3 rounded-2xl ${isCurrentUser ? 'bg-primary-600 text-white rounded-br-lg' : 'bg-white dark:bg-zinc-700 dark:text-gray-200 rounded-bl-lg'}`}>
+                          <div className={`max-w-md lg:max-w-lg p-3 rounded-2xl ${isCurrentUser ? 'bg-primary text-primary-foreground rounded-br-lg' : 'bg-card text-card-foreground rounded-bl-lg'}`}>
                             {!isCurrentUser && (<p className={`text-xs font-bold mb-1 ${msg.userRole === 'Owner' ? 'text-red-400' : msg.userRole === 'Manager' ? 'text-blue-400' : 'text-green-400'}`}>{msg.userName} ({msg.userRole})</p>)}
                             <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
                             <p className="text-xs opacity-70 mt-1 text-right">{dayjs(msg.createdAt?.toDate()).format('h:mm A')}</p>
@@ -200,21 +202,22 @@ const TeamChatPage: React.FC = () => {
               </div>
 
               {/* Input Form */}
-              <footer className="p-4 bg-white dark:bg-zinc-800 border-t dark:border-zinc-700">
+              <footer className="p-4 bg-background border-t">
                 <form onSubmit={handleSendMessage} className="flex items-center gap-3">
-                  <input
+                  <Input
+                    id="message-input"
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Type a message..."
-                    className="flex-1 w-full px-4 py-2 bg-gray-100 dark:bg-zinc-700 border-transparent rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                    className="flex-1"
                     autoFocus
                   />
-                  <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50" disabled={!newMessage.trim()}>
+                  <Button type="submit" size="icon" disabled={!newMessage.trim()}>
                     <Send className="w-5 h-5" />
-                  </button>
+                  </Button>
                 </form>
-                <p className="text-xs text-gray-400 mt-2 ml-1">Press <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-md dark:bg-gray-900 dark:text-gray-100 dark:border-gray-900">Enter</kbd> to send.</p>
+                <p className="text-xs text-muted-foreground mt-2 ml-1">Press <kbd className="px-2 py-1 text-xs font-semibold text-foreground bg-muted border rounded-md">Enter</kbd> to send.</p>
               </footer>
             </>
           )}
