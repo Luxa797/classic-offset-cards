@@ -10,25 +10,11 @@ import { Eye, Edit, Trash2, Loader2, AlertTriangle, Search, UserPlus, Star, Chev
 import toast from 'react-hot-toast';
 import { useUser } from '@/context/UserContext';
 import ImportExportCustomers from './enhancements/ImportExportCustomers';
-
-interface CustomerSummary {
-  id: string;
-  name: string;
-  phone: string;
-  email?: string;
-  address?: string;
-  joined_date: string;
-  total_orders: number;
-  total_paid: number;
-  balance_due: number;
-  last_order_date?: string;
-  tags?: string[];
-}
+import { Customer } from '@/types';
 
 interface CustomerTableProps {
-  onAdd: () => void;
-  onEdit: (customer: CustomerSummary) => void;
-  onDataChange: () => void;
+  onAddNew: () => void;
+  onEdit: (customer: Customer) => void;
 }
 
 type SortField = 'name' | 'joined_date' | 'total_orders' | 'total_paid' | 'balance_due';
@@ -36,9 +22,9 @@ type SortOrder = 'asc' | 'desc';
 
 const ITEMS_PER_PAGE = 10;
 
-const CustomerTable: React.FC<CustomerTableProps> = ({ onAdd, onEdit, onDataChange }) => {
+const CustomerTable: React.FC<CustomerTableProps> = ({ onAddNew, onEdit }) => {
   const { userProfile } = useUser();
-  const [customers, setCustomers] = useState<CustomerSummary[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,8 +37,8 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onAdd, onEdit, onDataChan
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCustomers, setTotalCustomers] = useState(0);
 
-  const [selectedCustomerForDetails, setSelectedCustomerForDetails] = useState<CustomerSummary | null>(null);
-  const [customerToDelete, setCustomerToDelete] = useState<CustomerSummary | null>(null);
+  const [selectedCustomerForDetails, setSelectedCustomerForDetails] = useState<Customer | null>(null);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
@@ -95,11 +81,11 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onAdd, onEdit, onDataChan
 
   useEffect(() => {
     fetchCustomers();
-  }, [fetchCustomers, onDataChange]);
+  }, [fetchCustomers]);
 
   const totalPages = Math.ceil(totalCustomers / ITEMS_PER_PAGE);
 
-  const handleDeleteCustomer = (customer: CustomerSummary) => {
+  const handleDeleteCustomer = (customer: Customer) => {
     if (!userProfile || userProfile.role !== 'Owner') {
       toast.error('Permission denied: Only Owners can delete customers.');
       return;
@@ -115,7 +101,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onAdd, onEdit, onDataChan
       const { error: deleteError } = await supabase.rpc('delete_customer_and_related_data', { customer_id_to_delete: customerToDelete.id });
       if (deleteError) throw deleteError;
       toast.success('Customer deleted successfully!');
-      onDataChange();
+      fetchCustomers(); // Refetch data
       setShowDeleteModal(false);
       setCustomerToDelete(null);
     } catch (err: any) {
@@ -148,7 +134,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onAdd, onEdit, onDataChan
           </div>
           <div className="flex items-center gap-2">
             <ImportExportCustomers />
-            <Button onClick={onAdd} size="sm" className="w-full sm:w-auto">
+            <Button onClick={onAddNew} size="sm" className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" /> Add New Customer
             </Button>
           </div>
@@ -185,7 +171,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onAdd, onEdit, onDataChan
               {customers.map((customer) => (
                 <tr key={customer.id}>
                   <td className="px-4 py-3 font-medium text-foreground flex items-center gap-2">
-                    {customer.total_paid > 10000 && <Star size={14} className="text-yellow-500 fill-current" title="Premium Customer"/>}
+                    {(customer.total_spent || 0) > 10000 && <Star size={14} className="text-yellow-500 fill-current" title="Premium Customer"/>}
                     {customer.name}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground"><div>{customer.phone}</div><div className="text-xs">{customer.email}</div></td>
@@ -195,8 +181,8 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onAdd, onEdit, onDataChan
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right text-foreground">{customer.total_orders || 0}</td>
-                  <td className={`px-4 py-3 text-right font-bold ${customer.balance_due > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    ₹{(customer.balance_due || 0).toLocaleString('en-IN')}
+                  <td className={`px-4 py-3 text-right font-bold ${(customer.balance_due || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    ₹{((customer.balance_due || 0)).toLocaleString('en-IN')}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{new Date(customer.joined_date).toLocaleDateString('en-GB')}</td>
                   <td className="px-4 py-3 text-center space-x-1">
