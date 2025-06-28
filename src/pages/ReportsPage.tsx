@@ -6,6 +6,8 @@ import Button from '@/components/ui/Button';
 import { useReactToPrint } from 'react-to-print';
 import { Download, Loader2, BarChart, Search, X, ArrowLeft, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 // Define the report types
 type ReportType = 'profit_loss' | 'orders_list' | 'customers_list' | 'payment_details' | 'due_summary' | 'invoice_report';
@@ -139,6 +141,9 @@ const ReportsPage: React.FC = () => {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
   const [invoiceDetailData, setInvoiceDetailData] = useState<any | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  
+  // Reference for PDF printing
+  const reportTableRef = useRef<HTMLDivElement>(null);
 
   const handleReportTypeChange = (newType: ReportType) => {
     setReportType(newType);
@@ -337,9 +342,114 @@ const ReportsPage: React.FC = () => {
     }
   }
 
+  // Handle print using react-to-print
+  const handlePrint = useReactToPrint({
+    content: () => reportTableRef.current,
+    documentTitle: `${reportType}_report_${new Date().toISOString().split('T')[0]}`,
+    onBeforeGetContent: () => new Promise<void>((resolve) => setTimeout(resolve, 300)),
+    onAfterPrint: () => toast.success('PDF generated successfully!'),
+    pageStyle: `
+      @page {
+        size: A4;
+        margin: 20mm;
+      }
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        table {
+          border-collapse: collapse;
+          width: 100%;
+        }
+        th, td {
+          padding: 8px;
+          text-align: left;
+          border-bottom: 1px solid #ddd;
+        }
+        th {
+          background-color: #f2f2f2;
+          font-weight: bold;
+        }
+      }
+    `,
+  });
+
+  // Function to download PDF using jsPDF
   const downloadPdf = () => {
-    // This is a placeholder for PDF generation functionality
-    toast.success('PDF download started');
+    if (!reportData || reportData.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+
+    try {
+      const doc = new jsPDF();
+      
+      // Add title
+      const title = `${reportOptions.find(opt => opt.value === reportType)?.label || 'Report'}`;
+      doc.setFontSize(18);
+      doc.text(title, 14, 20);
+      
+      // Add date range if applicable
+      if (filters.startDate || filters.endDate) {
+        doc.setFontSize(12);
+        doc.text(
+          `Period: ${filters.startDate ? new Date(filters.startDate).toLocaleDateString() : 'Start'} to ${filters.endDate ? new Date(filters.endDate).toLocaleDateString() : 'End'}`, 
+          14, 
+          30
+        );
+      }
+      
+      // Add company info
+      doc.setFontSize(10);
+      doc.text('Classic Offset Cards', 14, 40);
+      doc.text('363, bazar road, kadayanallur -62775', 14, 45);
+      doc.text('Tenkasi District, Tamil Nadu', 14, 50);
+      
+      // Generate table
+      const tableData = reportData.map(row => {
+        if (Array.isArray(row)) {
+          return row;
+        } else {
+          return Object.values(row).map(val => 
+            val === null ? '-' : 
+            typeof val === 'object' ? JSON.stringify(val) : 
+            String(val)
+          );
+        }
+      });
+      
+      // @ts-ignore - jspdf-autotable types
+      doc.autoTable({
+        head: [tableHeaders],
+        body: tableData,
+        startY: 60,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [66, 139, 202], textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [240, 240, 240] },
+      });
+      
+      // Add footer with date
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.text(
+          `Generated on ${new Date().toLocaleString()} - Page ${i} of ${pageCount}`,
+          doc.internal.pageSize.width / 2,
+          doc.internal.pageSize.height - 10,
+          { align: 'center' }
+        );
+      }
+      
+      // Save the PDF
+      doc.save(`${reportType}_report_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success('PDF downloaded successfully!');
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast.error('Failed to generate PDF. Please try again.');
+    }
   };
 
   const renderFilters = () => {
@@ -464,9 +574,29 @@ const ReportsPage: React.FC = () => {
             <Card className="mt-6">
                  <div className="p-4 border-b flex justify-between items-center">
                     <h3 className="font-semibold">Report Preview</h3>
-                    <Button onClick={downloadPdf} size="sm"><Download className="mr-2 h-4 w-4" /> Download as PDF</Button>
+                    <div className="flex gap-2">
+                        <Button onClick={handlePrint} size="sm">
+                            <Printer className="mr-2 h-4 w-4" /> Print Report
+                        </Button>
+                        <Button onClick={downloadPdf} size="sm">
+                            <Download className="mr-2 h-4 w-4" /> Download PDF
+                        </Button>
+                    </div>
                 </div>
-                <div className="overflow-x-auto p-2">
+                <div className="overflow-x-auto p-2" ref={reportTableRef}>
+                    <div className="p-4 hidden print:block">
+                        <h1 className="text-xl font-bold mb-2">{reportOptions.find(opt => opt.value === reportType)?.label || 'Report'}</h1>
+                        {(filters.startDate || filters.endDate) && (
+                            <p className="text-sm mb-4">
+                                Period: {filters.startDate ? new Date(filters.startDate).toLocaleDateString() : 'Start'} to {filters.endDate ? new Date(filters.endDate).toLocaleDateString() : 'End'}
+                            </p>
+                        )}
+                        <div className="text-xs mb-6">
+                            <p>Classic Offset Cards</p>
+                            <p>363, bazar road, kadayanallur -62775</p>
+                            <p>Tenkasi District, Tamil Nadu</p>
+                        </div>
+                    </div>
                     <table className="min-w-full text-sm">
                         <thead className="bg-muted/50">
                             <tr>{tableHeaders.map(th => <th key={th} className="px-4 py-2 text-left font-medium">{th}</th>)}</tr>
@@ -482,6 +612,9 @@ const ReportsPage: React.FC = () => {
                             ))}
                         </tbody>
                     </table>
+                    <div className="p-4 text-xs text-right hidden print:block">
+                        Generated on {new Date().toLocaleString()}
+                    </div>
                 </div>
             </Card>
        );
