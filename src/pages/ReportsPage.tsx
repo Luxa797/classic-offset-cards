@@ -168,7 +168,10 @@ const ReportsPage: React.FC = () => {
             // Logic for all other reports
             switch (reportType) {
                 case 'profit_loss':
-                    ({ data: queryData, error } = await supabase.rpc('get_profit_loss_report', { start_date: filters.startDate, end_date: filters.endDate }));
+                    ({ data: queryData, error } = await supabase.rpc('get_profit_loss_report', { 
+                        start_date: filters.startDate || null, 
+                        end_date: filters.endDate || null 
+                    }));
                     headers = ['Category', 'Amount (₹)'];
                     queryData = queryData?.length ? [
                         ['Total Revenue', `+ ₹${queryData[0].total_revenue.toLocaleString('en-IN')}`],
@@ -177,7 +180,11 @@ const ReportsPage: React.FC = () => {
                     ] : [];
                     break;
                 case 'orders_list':
-                    ({ data: queryData, error } = await supabase.rpc('get_orders_report', { start_date: filters.startDate, end_date: filters.endDate, order_status: filters.orderStatus }));
+                    ({ data: queryData, error } = await supabase.rpc('get_orders_report', { 
+                        start_date: filters.startDate || null, 
+                        end_date: filters.endDate || null, 
+                        order_status: filters.orderStatus || null 
+                    }));
                     headers = ['Order ID', 'Customer', 'Type', 'Qty', 'Amount', 'Status', 'Date'];
                     break;
                 case 'due_summary':
@@ -234,6 +241,27 @@ const ReportsPage: React.FC = () => {
                 <Input id="endDate" label="To Date" type="date" value={filters.endDate} onChange={handleFilterChange} />
                 <Input id="searchTerm" label="Customer Name" value={filters.searchTerm} onChange={handleFilterChange} placeholder="Search name..." />
                 <Input id="orderId" label="Order Number" type="number" value={filters.orderId} onChange={handleFilterChange} placeholder="Search ID..." />
+            </div>
+        );
+      case 'profit_loss':
+        return (
+            <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                <Input id="startDate" label="From Date" type="date" value={filters.startDate} onChange={handleFilterChange} />
+                <Input id="endDate" label="To Date" type="date" value={filters.endDate} onChange={handleFilterChange} />
+            </div>
+        );
+      case 'orders_list':
+        return (
+            <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <Input id="startDate" label="From Date" type="date" value={filters.startDate} onChange={handleFilterChange} />
+                <Input id="endDate" label="To Date" type="date" value={filters.endDate} onChange={handleFilterChange} />
+                <Input as="select" id="orderStatus" label="Order Status" value={filters.orderStatus} onChange={handleFilterChange}>
+                    <option value="">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                </Input>
             </div>
         );
       // ... other filter rendering logic ...
