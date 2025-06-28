@@ -27,7 +27,7 @@ const InvoiceDetailView = ({ invoiceData, onBack }: { invoiceData: any; onBack: 
     const { invoice, payments } = invoiceData;
 
     const handlePrint = useReactToPrint({
-        content: () => printRef.current,
+        contentRef: printRef,
         documentTitle: `Invoice_${invoice.id}`,
         pageStyle: `@media print { body { -webkit-print-color-adjust: exact; } @page { size: A4; margin: 20mm; } }`,
         onBeforeGetContent: () => new Promise<void>((resolve) => setTimeout(resolve, 300)),
@@ -344,7 +344,7 @@ const ReportsPage: React.FC = () => {
 
   // Handle print using react-to-print
   const handlePrint = useReactToPrint({
-    content: () => reportTableRef.current,
+    contentRef: reportTableRef,
     documentTitle: `${reportType}_report_${new Date().toISOString().split('T')[0]}`,
     onBeforeGetContent: () => new Promise<void>((resolve) => setTimeout(resolve, 300)),
     onAfterPrint: () => toast.success('PDF generated successfully!'),
@@ -583,7 +583,7 @@ const ReportsPage: React.FC = () => {
                         </Button>
                     </div>
                 </div>
-                <div className="overflow-x-auto p-2" ref={reportTableRef}>
+                <div ref={reportTableRef} className="overflow-x-auto p-2">
                     <div className="p-4 hidden print:block">
                         <h1 className="text-xl font-bold mb-2">{reportOptions.find(opt => opt.value === reportType)?.label || 'Report'}</h1>
                         {(filters.startDate || filters.endDate) && (
