@@ -7,7 +7,7 @@ import { useReactToPrint } from 'react-to-print';
 import { Download, Loader2, BarChart, Search, X, ArrowLeft, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 // Define the report types
 type ReportType = 'profit_loss' | 'orders_list' | 'customers_list' | 'payment_details' | 'due_summary' | 'invoice_report';
@@ -419,8 +419,8 @@ const ReportsPage: React.FC = () => {
         }
       });
       
-      // @ts-ignore - jspdf-autotable types
-      doc.autoTable({
+      // Use autoTable function directly
+      autoTable(doc, {
         head: [tableHeaders],
         body: tableData,
         startY: 60,
