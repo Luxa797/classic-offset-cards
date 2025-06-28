@@ -1,21 +1,22 @@
-// src/components/ui/ProfileDropdown.tsx
-
-import { useState, useEffect, useRef } from 'react'; // ✅ useRef-ஐ இறக்குமதி செய்யவும்
-import { LogOut } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { LogOut, User, Settings, HelpCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
-import { useNavigate } from 'react-router-dom';
-import { useClickOutside } from '@/hooks/useClickOutside'; // ✅ நமது புதிய hook-ஐ இறக்குமதி செய்யவும்
+import { useNavigate, Link } from 'react-router-dom';
+import { useClickOutside } from '@/hooks/useClickOutside';
+import { useTheme } from '@/lib/ThemeProvider';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ProfileDropdown = () => {
   const [open, setOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<{ name?: string; email?: string; role?: string }>({});
   const navigate = useNavigate();
-
-  // ✅ డ్రాప్-డౌన్ கூறின் ref-ஐ உருவாக்கவும்
+  const { theme } = useTheme();
+  
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // ✅ வெளியே கிளிக் செய்தால், డ్రాప్-డౌன்-ஐ மூடவும்
-  useClickOutside(dropdownRef, () => setOpen(false));
+  useClickOutside(dropdownRef, () => {
+    setOpen(false);
+  });
 
   useEffect(() => {
     const getUserInfo = async () => {
@@ -29,37 +30,74 @@ const ProfileDropdown = () => {
   }, []);
 
   const handleLogout = async () => {
-    setOpen(false); // லாக்-அவுட் செய்வதற்கு முன் డ్రాప్-డౌన్-ஐ மூடவும்
+    setOpen(false);
     const { error } = await supabase.auth.signOut();
     if (!error) navigate('/login');
     else alert('Logout failed: ' + error.message);
   };
 
+  const getInitials = () => {
+    if (userInfo?.name) {
+      return userInfo.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+    }
+    return 'CO';
+  };
+
   return (
-    // ✅ ref-ஐ ಮುಖ್ಯ div-உடன் இணைக்கவும்
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="h-8 w-8 rounded-full bg-blue-500 text-white text-sm font-bold flex items-center justify-center focus:outline-none"
+        className="h-9 w-9 rounded-full bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background transition-all"
+        aria-label="Open user menu"
       >
-        {userInfo?.name?.[0] || 'CO'}
+        {getInitials()}
       </button>
 
-      {open && (
-        <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg z-50">
-          <div className="px-4 py-3 border-b dark:border-zinc-700">
-            <p className="text-sm font-semibold text-zinc-800 dark:text-white">{userInfo?.name || 'Logged In'}</p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{userInfo?.email}</p>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 italic">Role: {userInfo?.role || 'Unknown'}</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition"
+      <AnimatePresence>
+        {open && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden"
           >
-            <LogOut size={16} /> Logout
-          </button>
-        </div>
-      )}
+            <div className="px-4 py-3 border-b border-border">
+              <p className="text-sm font-semibold text-foreground">{userInfo?.name || 'Logged In'}</p>
+              <p className="text-xs text-muted-foreground">{userInfo?.email}</p>
+              <p className="text-xs text-muted-foreground italic">Role: {userInfo?.role || 'Unknown'}</p>
+            </div>
+            
+            <div className="py-1">
+              <Link 
+                to="/settings" 
+                className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors"
+                onClick={() => setOpen(false)}
+              >
+                <Settings size={16} className="text-muted-foreground" />
+                Settings
+              </Link>
+              
+              <Link 
+                to="/help" 
+                className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors"
+                onClick={() => setOpen(false)}
+              >
+                <HelpCircle size={16} className="text-muted-foreground" />
+                Help & Support
+              </Link>
+              
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors text-left"
+              >
+                <LogOut size={16} />
+                Logout
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

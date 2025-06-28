@@ -1,29 +1,54 @@
-// src/components/ui/Modal.tsx
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from './Button';
+import { twMerge } from 'tailwind-merge';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title?: string;
+  title?: React.ReactNode;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';
+  className?: string;
+  showCloseButton?: boolean;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
+const Modal: React.FC<ModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  title, 
+  children, 
+  size = 'md', 
+  className = '',
+  showCloseButton = true
+}) => {
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };
-    if (isOpen) document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
+    
+    if (isOpen) {
+      document.addEventListener('keydown', handleEsc);
+      // Prevent scrolling on the body when modal is open
+      document.body.style.overflow = 'hidden';
+    }
+    
+    return () => {
+      document.removeEventListener('keydown', handleEsc);
+      // Restore scrolling when modal is closed
+      document.body.style.overflow = '';
+    };
   }, [isOpen, onClose]);
 
   const sizeClasses = {
-    sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg',
-    xl: 'max-w-xl', '2xl': 'max-w-2xl', '3xl': 'max-w-3xl'
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    'full': 'max-w-[95vw] max-h-[95vh]'
   };
 
   return (
@@ -51,17 +76,33 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className={`relative w-full m-4 ${sizeClasses[size]} bg-white dark:bg-gray-800 rounded-2xl shadow-xl flex flex-col max-h-[calc(100vh-2rem)]`}
+            className={twMerge(`
+              relative w-full m-4 
+              ${sizeClasses[size]} 
+              bg-card text-card-foreground 
+              rounded-lg shadow-xl 
+              flex flex-col 
+              max-h-[calc(100vh-2rem)]
+            `, className)}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             {title && (
-              <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <h2 id="modal-title\" className="text-lg font-semibold text-gray-900 dark:text-white">
+              <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border flex-shrink-0">
+                <h2 id="modal-title" className="text-lg font-semibold">
                   {title}
                 </h2>
-                <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close modal">
-                  <X size={20} />
-                </Button>
+                {showCloseButton && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={onClose} 
+                    aria-label="Close modal"
+                    className="rounded-full h-8 w-8 p-0 hover:bg-muted"
+                  >
+                    <X size={18} />
+                  </Button>
+                )}
               </div>
             )}
             

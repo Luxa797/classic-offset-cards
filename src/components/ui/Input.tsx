@@ -1,24 +1,33 @@
-// src/components/ui/Input.tsx
-import React, { Children } from 'react';
+import React from 'react';
 import { twMerge } from 'tailwind-merge';
 
-// Extend props to accept general element attributes and 'as' prop
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement | HTMLSelectElement> {
   label?: string;
   icon?: React.ReactNode;
   error?: string;
   as?: 'input' | 'select';
-  children?: React.ReactNode; // To allow for <option> elements
+  children?: React.ReactNode;
+  helperText?: string;
 }
 
-const Input: React.FC<InputProps> = ({ label, id, icon, error, className = '', as = 'input', children, ...props }) => {
+const Input: React.FC<InputProps> = ({ 
+  label, 
+  id, 
+  icon, 
+  error, 
+  className = '', 
+  as = 'input', 
+  children, 
+  helperText,
+  ...props 
+}) => {
   const commonStyles = `
     flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm 
     ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium 
     placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 
     focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed 
-    disabled:opacity-50
-    ${error ? 'border-destructive focus:ring-destructive' : ''}
+    disabled:opacity-50 transition-colors
+    ${error ? 'border-destructive focus-visible:ring-destructive' : ''}
     ${icon ? 'pl-10' : ''}
   `;
 
@@ -45,7 +54,12 @@ const Input: React.FC<InputProps> = ({ label, id, icon, error, className = '', a
           {children}
         </Component>
       </div>
-      {error && <p className="mt-1.5 text-xs text-destructive">{error}</p>}
+      {helperText && !error && (
+        <p className="mt-1.5 text-xs text-muted-foreground">{helperText}</p>
+      )}
+      {error && (
+        <p className="mt-1.5 text-xs text-destructive">{error}</p>
+      )}
     </div>
   );
 };

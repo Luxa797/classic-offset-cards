@@ -15,8 +15,8 @@ import Login from './components/dashboard/auth/Login';
 
 // A simple loading fallback component for suspense
 const LoadingFallback = () => (
-  <div className="flex justify-center items-center h-screen w-full">
-    <div className="text-lg font-semibold text-gray-700 dark:text-gray-300">Loading...</div>
+  <div className="flex justify-center items-center h-screen w-full bg-background text-foreground">
+    <div className="text-lg font-semibold">Loading...</div>
   </div>
 );
 
@@ -43,7 +43,7 @@ const TeamChatPage = lazy(() => import('./pages/TeamChatPage'));
 const AdminContentManagement = lazy(() => import('./pages/AdminContentManagement'));
 const AIAgentPage = lazy(() => import('./pages/AIAgentPage'));
 const InsightsPage = lazy(() => import('./pages/InsightsPage'));
-const ReportsPage = lazy(() => import('./pages/ReportsPage')); // Import the new ReportsPage
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 
 // Helper function to wrap routes with Suspense
 const Suspended = (element: React.ReactNode) => (
@@ -79,7 +79,7 @@ const router = createBrowserRouter(
         <Route path="/ai-agent" element={Suspended(<AIAgentPage />)} />
         <Route path="/admin/content" element={Suspended(<AdminContentManagement />)} />
         <Route path="/insights" element={Suspended(<InsightsPage />)} />
-        <Route path="/reports" element={Suspended(<ReportsPage />)} /> {/* Add the new reports route */}
+        <Route path="/reports" element={Suspended(<ReportsPage />)} />
       </Route>
 
       {/* 404 page */}
@@ -95,12 +95,33 @@ function App() {
         <Toaster
           position="top-right"
           toastOptions={{
-            success: { duration: 3000 },
-            error: { duration: 5000 },
+            success: { 
+              duration: 3000,
+              style: {
+                background: 'hsl(var(--success))',
+                color: 'hsl(var(--success-foreground))'
+              },
+              iconTheme: {
+                primary: 'hsl(var(--success-foreground))',
+                secondary: 'hsl(var(--success))',
+              }
+            },
+            error: { 
+              duration: 5000,
+              style: {
+                background: 'hsl(var(--destructive))',
+                color: 'hsl(var(--destructive-foreground))'
+              },
+              iconTheme: {
+                primary: 'hsl(var(--destructive-foreground))',
+                secondary: 'hsl(var(--destructive))',
+              }
+            },
             style: {
               fontSize: '14px',
               maxWidth: '400px',
               padding: '12px 18px',
+              borderRadius: 'var(--radius)',
             },
           }}
         />
