@@ -1,16 +1,13 @@
-// src/pages/ReportsPage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
-import { Download, Loader2, BarChart, Search, X, List, Printer, ArrowLeft } from 'lucide-react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import toast from 'react-hot-toast';
 import { useReactToPrint } from 'react-to-print';
+import { Download, Loader2, BarChart, Search, X, ArrowLeft, Printer } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-// ADDED: New 'invoice_report' type
+// Define the report types
 type ReportType = 'profit_loss' | 'orders_list' | 'customers_list' | 'payment_details' | 'due_summary' | 'invoice_report';
 
 const reportOptions = [
@@ -19,10 +16,10 @@ const reportOptions = [
   { value: 'customers_list', label: 'Customer List' },
   { value: 'payment_details', label: 'Payment Details' },
   { value: 'due_summary', label: 'Due Summary Report' },
-  { value: 'invoice_report', label: 'Invoice Report' }, // ADDED
+  { value: 'invoice_report', label: 'Invoice Report' },
 ];
 
-// --- இன்வாய்ஸ் விவரங்களைக் காட்டும் புதிய காம்போனென்ட் ---
+// Invoice Detail View Component
 const InvoiceDetailView = ({ invoiceData, onBack }: { invoiceData: any; onBack: () => void; }) => {
     const printRef = useRef<HTMLDivElement>(null);
     const { invoice, payments } = invoiceData;
@@ -115,17 +112,30 @@ const InvoiceDetailView = ({ invoiceData, onBack }: { invoiceData: any; onBack: 
     );
 };
 
-
 const ReportsPage: React.FC = () => {
   const [reportType, setReportType] = useState<ReportType>('profit_loss');
   const [filters, setFilters] = useState<any>({
-    startDate: '', endDate: '', orderStatus: '', searchTerm: '', sinceDate: '', customerName: '', orderNumber: '', orderId: ''
+    startDate: '', 
+    endDate: '', 
+    orderStatus: '', 
+    searchTerm: '', 
+    sinceDate: '', 
+    customerName: '', 
+    orderNumber: '', 
+    orderId: '',
+    customerPhone: '',
+    customerEmail: '',
+    customerTag: '',
+    paymentMethod: '',
+    paymentStatus: '',
+    minAmount: '',
+    maxAmount: ''
   });
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any[] | null>(null);
   const [tableHeaders, setTableHeaders] = useState<string[]>([]);
   
-  // --- இன்வாய்ஸ் ரிப்போர்ட்டுக்கான புதிய State-கள் ---
+  // Invoice report states
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
   const [invoiceDetailData, setInvoiceDetailData] = useState<any | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
@@ -144,7 +154,23 @@ const ReportsPage: React.FC = () => {
   };
   
   const clearFilters = () => {
-    setFilters({ startDate: '', endDate: '', orderStatus: '', searchTerm: '', sinceDate: '', customerName: '', orderNumber: '', orderId: '' });
+    setFilters({ 
+      startDate: '', 
+      endDate: '', 
+      orderStatus: '', 
+      searchTerm: '', 
+      sinceDate: '', 
+      customerName: '', 
+      orderNumber: '', 
+      orderId: '',
+      customerPhone: '',
+      customerEmail: '',
+      customerTag: '',
+      paymentMethod: '',
+      paymentStatus: '',
+      minAmount: '',
+      maxAmount: ''
+    });
   }
 
   const generateReport = async () => {
@@ -164,6 +190,88 @@ const ReportsPage: React.FC = () => {
                 p_order_id: filters.orderId ? parseInt(filters.orderId) : null,
             }));
             headers = ['Order ID', 'Date', 'Customer', 'Total', 'Due', 'Status'];
+        } else if (reportType === 'customers_list') {
+            // Customer list report
+            let query = supabase.from('customers').select('*');
+            
+            // Apply filters
+            if (filters.customerName) {
+                query = query.ilike('name', `%${filters.customerName}%`);
+            }
+            if (filters.customerPhone) {
+                query = query.ilike('phone', `%${filters.customerPhone}%`);
+            }
+            if (filters.customerEmail) {
+                query = query.ilike('email', `%${filters.customerEmail}%`);
+            }
+            if (filters.customerTag) {
+                query = query.contains('tags', [filters.customerTag]);
+            }
+            if (filters.sinceDate) {
+                query = query.gte('joined_date', filters.sinceDate);
+            }
+            
+            // Order by name
+            query = query.order('name');
+            
+            const { data, error: customerError } = await query;
+            queryData = data || [];
+            error = customerError;
+            headers = ['ID', 'Name', 'Phone', 'Email', 'Address', 'Joined Date'];
+        } else if (reportType === 'payment_details') {
+            // Payment details report
+            let query = supabase.from('payments').select(`
+                id, 
+                amount_paid, 
+                payment_date, 
+                payment_method,
+                status,
+                customers (name, phone),
+                order_id
+            `);
+            
+            // Apply filters
+            if (filters.startDate) {
+                query = query.gte('payment_date', filters.startDate);
+            }
+            if (filters.endDate) {
+                query = query.lte('payment_date', filters.endDate);
+            }
+            if (filters.paymentMethod) {
+                query = query.eq('payment_method', filters.paymentMethod);
+            }
+            if (filters.paymentStatus) {
+                query = query.eq('status', filters.paymentStatus);
+            }
+            if (filters.minAmount) {
+                query = query.gte('amount_paid', filters.minAmount);
+            }
+            if (filters.maxAmount) {
+                query = query.lte('amount_paid', filters.maxAmount);
+            }
+            if (filters.customerName) {
+                query = query.ilike('customers.name', `%${filters.customerName}%`);
+            }
+            
+            // Order by payment date (newest first)
+            query = query.order('payment_date', { ascending: false });
+            
+            const { data, error: paymentError } = await query;
+            
+            // Process the data to format it for display
+            queryData = (data || []).map(payment => ({
+                id: payment.id,
+                order_id: payment.order_id,
+                customer_name: payment.customers?.name || 'Unknown',
+                customer_phone: payment.customers?.phone || '-',
+                amount_paid: payment.amount_paid,
+                payment_date: new Date(payment.payment_date).toLocaleDateString('en-GB'),
+                payment_method: payment.payment_method || '-',
+                status: payment.status || '-'
+            }));
+            
+            error = paymentError;
+            headers = ['Payment ID', 'Order ID', 'Customer', 'Phone', 'Amount', 'Date', 'Method', 'Status'];
         } else {
             // Logic for all other reports
             switch (reportType) {
@@ -191,7 +299,6 @@ const ReportsPage: React.FC = () => {
                     ({ data: queryData, error } = await supabase.rpc('get_due_summary_report'));
                     headers = ['Order ID', 'Delivery Date', 'Balance Due (₹)'];
                     break;
-                // Add other report cases here
             }
         }
         
@@ -209,7 +316,7 @@ const ReportsPage: React.FC = () => {
     }
   };
   
-  // --- இன்வாய்ஸ் விவரங்களைப் பெறும் ஃபங்ஷன் ---
+  // Function to fetch invoice details
   const handleInvoiceSelect = async (invoiceId: number) => {
     setSelectedInvoiceId(invoiceId);
     setIsDetailLoading(true);
@@ -230,7 +337,10 @@ const ReportsPage: React.FC = () => {
     }
   }
 
-  const downloadPdf = () => { /* This function is for other reports */ };
+  const downloadPdf = () => {
+    // This is a placeholder for PDF generation functionality
+    toast.success('PDF download started');
+  };
 
   const renderFilters = () => {
     switch (reportType) {
@@ -257,20 +367,55 @@ const ReportsPage: React.FC = () => {
                 <Input id="endDate" label="To Date" type="date" value={filters.endDate} onChange={handleFilterChange} />
                 <Input as="select" id="orderStatus" label="Order Status" value={filters.orderStatus} onChange={handleFilterChange}>
                     <option value="">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Design">Design</option>
+                    <option value="Printing">Printing</option>
+                    <option value="Delivered">Delivered</option>
                 </Input>
             </div>
         );
-      // ... other filter rendering logic ...
+      case 'customers_list':
+        return (
+            <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <Input id="customerName" label="Customer Name" value={filters.customerName} onChange={handleFilterChange} placeholder="Search by name..." />
+                <Input id="customerPhone" label="Phone Number" value={filters.customerPhone} onChange={handleFilterChange} placeholder="Search by phone..." />
+                <Input id="customerEmail" label="Email" value={filters.customerEmail} onChange={handleFilterChange} placeholder="Search by email..." />
+                <Input id="customerTag" label="Tag" value={filters.customerTag} onChange={handleFilterChange} placeholder="Filter by tag (e.g. VIP)" />
+                <Input id="sinceDate" label="Joined Since" type="date" value={filters.sinceDate} onChange={handleFilterChange} />
+            </div>
+        );
+      case 'payment_details':
+        return (
+            <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <Input id="startDate" label="From Date" type="date" value={filters.startDate} onChange={handleFilterChange} />
+                <Input id="endDate" label="To Date" type="date" value={filters.endDate} onChange={handleFilterChange} />
+                <Input id="customerName" label="Customer Name" value={filters.customerName} onChange={handleFilterChange} placeholder="Search by name..." />
+                <Input as="select" id="paymentMethod" label="Payment Method" value={filters.paymentMethod} onChange={handleFilterChange}>
+                    <option value="">All Methods</option>
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Credit Card">Credit Card</option>
+                    <option value="Check">Check</option>
+                </Input>
+                <Input as="select" id="paymentStatus" label="Payment Status" value={filters.paymentStatus} onChange={handleFilterChange}>
+                    <option value="">All Status</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Partial">Partial</option>
+                    <option value="Due">Due</option>
+                    <option value="Overdue">Overdue</option>
+                </Input>
+                <div className="grid grid-cols-2 gap-2">
+                    <Input id="minAmount" label="Min Amount" type="number" value={filters.minAmount} onChange={handleFilterChange} placeholder="Min ₹" />
+                    <Input id="maxAmount" label="Max Amount" type="number" value={filters.maxAmount} onChange={handleFilterChange} placeholder="Max ₹" />
+                </div>
+            </div>
+        );
       default:
-        return <div className="md:col-span-3"><p className="text-sm text-gray-500 pt-6">Select a report type to see filters.</p></div>;
+        return <div className="md:col-span-3"><p className="text-sm text-muted-foreground pt-6">Select a report type to see filters.</p></div>;
     }
   };
   
-  // --- முக்கிய ரெண்டரிங் லாஜிக் ---
   const renderContent = () => {
     if (loading) {
         return <div className="p-8 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto" /></div>;
@@ -290,17 +435,17 @@ const ReportsPage: React.FC = () => {
                 <Card className="mt-6">
                     <div className="overflow-x-auto">
                         <table className="min-w-full text-sm">
-                           <thead className="bg-gray-50 dark:bg-gray-700/50">
+                           <thead className="bg-muted/50">
                                 <tr>{tableHeaders.map(th => <th key={th} className="px-4 py-2 text-left font-medium">{th}</th>)}</tr>
                             </thead>
-                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            <tbody className="bg-card divide-y divide-border">
                                 {reportData.map(invoice => (
-                                    <tr key={invoice.order_id} onClick={() => handleInvoiceSelect(invoice.order_id)} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <tr key={invoice.order_id} onClick={() => handleInvoiceSelect(invoice.order_id)} className="cursor-pointer hover:bg-muted/20">
                                         <td className="px-4 py-2 font-bold">#{invoice.order_id}</td>
                                         <td className="px-4 py-2">{new Date(invoice.order_date).toLocaleDateString('en-GB')}</td>
                                         <td className="px-4 py-2">{invoice.customer_name}</td>
                                         <td className="px-4 py-2">₹{invoice.total_amount.toLocaleString('en-IN')}</td>
-                                        <td className="px-4 py-2 text-red-600">₹{invoice.balance_due.toLocaleString('en-IN')}</td>
+                                        <td className="px-4 py-2 text-destructive">₹{invoice.balance_due.toLocaleString('en-IN')}</td>
                                         <td className="px-4 py-2">{invoice.status || 'N/A'}</td>
                                     </tr>
                                 ))}
@@ -310,10 +455,10 @@ const ReportsPage: React.FC = () => {
                 </Card>
             );
         }
-        return <div className="text-center p-6 text-gray-500">Use the filters and click "Search Invoices" to begin.</div>;
+        return <div className="text-center p-6 text-muted-foreground">Use the filters and click "Search Invoices" to begin.</div>;
     }
     
-    // FIX: மற்ற ரிப்போர்ட்டுகளுக்கான பொதுவான டேபிள் காட்சி
+    // Render for other reports
     if (reportData && reportData.length > 0) {
        return (
             <Card className="mt-6">
@@ -323,12 +468,12 @@ const ReportsPage: React.FC = () => {
                 </div>
                 <div className="overflow-x-auto p-2">
                     <table className="min-w-full text-sm">
-                        <thead className="bg-gray-50 dark:bg-gray-700/50">
+                        <thead className="bg-muted/50">
                             <tr>{tableHeaders.map(th => <th key={th} className="px-4 py-2 text-left font-medium">{th}</th>)}</tr>
                         </thead>
-                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        <tbody className="bg-card divide-y divide-border">
                             {reportData.map((row, i) => (
-                                <tr key={i}>
+                                <tr key={i} className="hover:bg-muted/20">
                                   {Array.isArray(row) 
                                     ? row.map((td: any, j) => <td key={j} className="px-4 py-2">{td}</td>)
                                     : Object.values(row).map((td: any, j) => <td key={j} className="px-4 py-2">{String(td)}</td>)
@@ -346,7 +491,7 @@ const ReportsPage: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-800 dark:text-white flex items-center gap-3"><BarChart /> Reports Center</h1>
+      <h1 className="text-2xl font-semibold flex items-center gap-3"><BarChart /> Reports Center</h1>
       
       <Card>
         <div className="p-6 space-y-6">
