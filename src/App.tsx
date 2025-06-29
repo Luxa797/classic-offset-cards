@@ -8,6 +8,7 @@ import {
 import { ThemeProvider } from './lib/ThemeProvider';
 import { UserProvider } from './context/UserContext';
 import { Toaster } from 'react-hot-toast';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 
 // Layout and Loading components
 import ProtectedLayout from './components/layout/ProtectedLayout';
@@ -45,9 +46,11 @@ const AIAgentPage = lazy(() => import('./pages/AIAgentPage'));
 const InsightsPage = lazy(() => import('./pages/InsightsPage'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 
-// Helper function to wrap routes with Suspense
+// Helper function to wrap routes with Suspense and ErrorBoundary
 const Suspended = (element: React.ReactNode) => (
-  <Suspense fallback={<LoadingFallback />}>{element}</Suspense>
+  <ErrorBoundary>
+    <Suspense fallback={<LoadingFallback />}>{element}</Suspense>
+  </ErrorBoundary>
 );
 
 const router = createBrowserRouter(

@@ -1,5 +1,5 @@
 // src/components/customers/CustomerTable.tsx
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
@@ -11,10 +11,12 @@ import toast from 'react-hot-toast';
 import { useUser } from '@/context/UserContext';
 import ImportExportCustomers from './enhancements/ImportExportCustomers';
 import { Customer } from '@/types';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 interface CustomerTableProps {
   onAddNew: () => void;
   onEdit: (customer: Customer) => void;
+  onDataChange: () => void;
 }
 
 type SortField = 'name' | 'joined_date' | 'total_orders' | 'total_paid' | 'balance_due';
@@ -22,7 +24,7 @@ type SortOrder = 'asc' | 'desc';
 
 const ITEMS_PER_PAGE = 10;
 
-const CustomerTable: React.FC<CustomerTableProps> = ({ onAddNew, onEdit }) => {
+const CustomerTable: React.FC<CustomerTableProps> = ({ onAddNew, onEdit, onDataChange }) => {
   const { userProfile } = useUser();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,8 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onAddNew, onEdit }) => {
   const [selectedCustomerForDetails, setSelectedCustomerForDetails] = useState<Customer | null>(null);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  const parentRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -81,7 +85,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onAddNew, onEdit }) => {
 
   useEffect(() => {
     fetchCustomers();
-  }, [fetchCustomers]);
+  }, [fetchCustomers, onDataChange]);
 
   const totalPages = Math.ceil(totalCustomers / ITEMS_PER_PAGE);
 
@@ -123,6 +127,14 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onAddNew, onEdit }) => {
       <ArrowUpDown size={14} className={sortField === field ? 'text-primary' : ''} />
     </button>
   );
+
+  // Virtual list setup
+  const rowVirtualizer = useVirtualizer({
+    count: customers.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 60, // Estimated row height
+    overscan: 5,
+  });
 
   return (
     <Card>

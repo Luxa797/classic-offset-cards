@@ -27,10 +27,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // State for mobile sidebar visibility (acts as an overlay)
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // State for desktop sidebar collapsed state
-  const [isDockCollapsed, setIsDockCollapsed] = useState(false);
+  const [isDockCollapsed, setIsDockCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved ? JSON.parse(saved) : false;
+  });
   const { theme } = useTheme();
   
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Save sidebar state to localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', JSON.stringify(isDockCollapsed));
+  }, [isDockCollapsed]);
 
   // Close mobile sidebar when clicking outside of it
   useClickOutside(sidebarRef, () => {
@@ -39,8 +47,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   });
 
+  // Close sidebar on route change on mobile
+  const location = useLocation();
+  useEffect(() => {
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname]);
+
   return (
-    <div className={`min-h-screen flex bg-gray-100 dark:bg-gray-900 ${theme === 'dark' ? 'dark' : ''}`}>
+    <div className={`min-h-screen flex bg-background ${theme === 'dark' ? 'dark' : ''}`}>
       <ScrollToTop />
       
       {/* --- Desktop Sidebar (Permanent) --- */}
@@ -63,7 +79,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden"
               aria-hidden="true"
               onClick={() => setSidebarOpen(false)}
             />

@@ -1,3 +1,4 @@
+// src/pages/ReportsPage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Card from '@/components/ui/Card';
@@ -27,7 +28,7 @@ const InvoiceDetailView = ({ invoiceData, onBack }: { invoiceData: any; onBack: 
     const { invoice, payments } = invoiceData;
 
     const handlePrint = useReactToPrint({
-        contentRef: printRef,
+        content: () => printRef.current,
         documentTitle: `Invoice_${invoice.id}`,
         pageStyle: `@media print { body { -webkit-print-color-adjust: exact; } @page { size: A4; margin: 20mm; } }`,
         onBeforeGetContent: () => new Promise<void>((resolve) => setTimeout(resolve, 300)),
@@ -344,7 +345,7 @@ const ReportsPage: React.FC = () => {
 
   // Handle print using react-to-print
   const handlePrint = useReactToPrint({
-    contentRef: reportTableRef,
+    content: () => reportTableRef.current,
     documentTitle: `${reportType}_report_${new Date().toISOString().split('T')[0]}`,
     onBeforeGetContent: () => new Promise<void>((resolve) => setTimeout(resolve, 300)),
     onAfterPrint: () => toast.success('PDF generated successfully!'),

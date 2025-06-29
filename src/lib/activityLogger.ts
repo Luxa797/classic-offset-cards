@@ -1,22 +1,28 @@
-// src/lib/activityLogger.ts
 import { db } from './firebaseClient';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from './supabaseClient';
 
 /**
- * பயனரின் செயல்பாட்டை Firestore இல் பதிவு செய்யும்.
- * @param message - செயல்பாட்டை விவரிக்கும் செய்தி (எ.கா., "Order #123 status updated to Printing").
- * @param user - செயல்பாட்டைச் செய்த பயனரின் பெயர் அல்லது ஐடி.
+ * Logs user activity to both Firestore and Supabase
+ * @param message The activity message to log
+ * @param user The name of the user performing the action
  */
-export const logActivity = async (message: string, user: string) => {
+export const logActivity = async (message: string, user: string): Promise<void> => {
   try {
-    await addDoc(collection(db, 'activity_logs'), {
-      message: message,
-      user: user,
-      timestamp: serverTimestamp(),
+    // Log to Firestore for real-time updates
+    await addDoc(collection(db, "activity_logs"), {
+      message,
+      user,
+      timestamp: serverTimestamp()
+    });
+    
+    // Also log to Supabase for SQL querying and long-term storage
+    await supabase.from("activity_logs").insert({
+      message,
+      user,
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error("Error logging activity:", error);
-    // செயல்பாட்டைப் பதிவு செய்வதில் பிழை ஏற்பட்டால், அதை அமைதியாகப் புறக்கணிக்கலாம்.
-    // இது பயனரின் முக்கிய அனுபவத்தைப் பாதிக்காது.
   }
 };

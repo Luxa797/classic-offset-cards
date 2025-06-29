@@ -1,4 +1,3 @@
-// src/components/ui/AnimatedCounter.tsx
 import React, { useEffect } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 
@@ -8,29 +7,36 @@ interface AnimatedCounterProps {
   postfix?: string;
   className?: string;
   decimals?: number;
+  duration?: number;
+  isCurrency?: boolean;
 }
 
 const AnimatedCounter: React.FC<AnimatedCounterProps> = ({ 
   to, 
   prefix = '', 
   postfix = '', 
-  className,
-  decimals = 0 
+  className = '',
+  decimals = 0,
+  duration = 1.5,
+  isCurrency = false
 }) => {
   const count = useMotionValue(0);
   
   const rounded = useTransform(count, latest => {
     const fixed = latest.toFixed(decimals);
-    return `${prefix}${new Intl.NumberFormat('en-IN').format(parseFloat(fixed))}${postfix}`;
+    const formatted = isCurrency 
+      ? new Intl.NumberFormat('en-IN').format(parseFloat(fixed))
+      : fixed;
+    return `${prefix}${formatted}${postfix}`;
   });
 
   useEffect(() => {
     const controls = animate(count, to, {
-      duration: 1.5,
+      duration,
       ease: "easeOut"
     });
     return controls.stop;
-  }, [to, count, decimals]);
+  }, [to, count, duration]);
 
   return (
     <motion.span className={className}>

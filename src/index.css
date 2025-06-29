@@ -100,6 +100,16 @@
   @apply bg-gray-400 dark:bg-gray-500;
 }
 
+/* Hide scrollbar for clean UI in some components */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
 /* Animation utilities */
 @layer utilities {
   .animate-slide-up {
@@ -108,6 +118,19 @@
   
   .animate-fade-in {
     animation: fade-in 0.3s ease-out forwards;
+  }
+  
+  .animate-shimmer {
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.2) 20%,
+      rgba(255, 255, 255, 0.5) 60%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    background-position-x: 180%;
   }
   
   @keyframes slide-up {
@@ -128,5 +151,80 @@
     to {
       opacity: 1;
     }
+  }
+  
+  @keyframes shimmer {
+    to {
+      background-position-x: -200%;
+    }
+  }
+}
+
+/* Typography styles for markdown content */
+.prose {
+  @apply text-foreground;
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-foreground mt-6 mb-4;
+  }
+  
+  h1 {
+    @apply text-3xl;
+  }
+  
+  h2 {
+    @apply text-2xl;
+  }
+  
+  h3 {
+    @apply text-xl;
+  }
+  
+  p {
+    @apply my-4;
+  }
+  
+  a {
+    @apply text-primary hover:underline;
+  }
+  
+  ul, ol {
+    @apply my-4 pl-6;
+  }
+  
+  ul {
+    @apply list-disc;
+  }
+  
+  ol {
+    @apply list-decimal;
+  }
+  
+  blockquote {
+    @apply border-l-4 border-muted pl-4 italic my-4;
+  }
+  
+  code {
+    @apply bg-muted px-1 py-0.5 rounded text-sm;
+  }
+  
+  pre {
+    @apply bg-muted p-4 rounded-lg overflow-x-auto my-4;
+  }
+  
+  pre code {
+    @apply bg-transparent p-0;
+  }
+  
+  table {
+    @apply w-full border-collapse my-4;
+  }
+  
+  th, td {
+    @apply border border-border p-2;
+  }
+  
+  th {
+    @apply bg-muted;
   }
 }
