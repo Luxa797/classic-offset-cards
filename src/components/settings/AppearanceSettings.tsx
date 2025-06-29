@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '../ui/Card';
+import Card from '../ui/Card';
 import { useTheme } from '@/lib/ThemeProvider';
 import { Sun, Moon, Monitor, Check } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';

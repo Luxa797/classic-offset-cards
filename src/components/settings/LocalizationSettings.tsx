@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card } from '../ui/Card';
+import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { Globe, Loader2, Languages } from 'lucide-react';
 import toast from 'react-hot-toast';
