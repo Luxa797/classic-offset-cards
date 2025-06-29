@@ -6,7 +6,7 @@ import StaffMembersTable from './StaffMembersTable';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export interface Employee {
+interface Employee {
   id: string;
   name: string;
   job_role: string;
@@ -16,7 +16,7 @@ export interface Employee {
   created_at: string;
 }
 
-export interface StaffLog {
+interface StaffLog {
     id: number;
     date: string;
     role: string;

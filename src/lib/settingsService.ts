@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
 // Define the settings types
-export interface UserSettings {
+interface UserSettings {
   id?: string;
   user_id: string;
   theme_preference: 'light' | 'dark' | 'system';
@@ -39,7 +39,7 @@ export interface UserSettings {
 }
 
 // Default settings
-export const defaultSettings: UserSettings = {
+const defaultSettings: UserSettings = {
   user_id: '',
   theme_preference: 'system',
   font_size: 'medium',
@@ -221,7 +221,7 @@ export function useUserSettings() {
 }
 
 // Function to create the user_settings table in Supabase if it doesn't exist
-export async function ensureSettingsTableExists() {
+async function ensureSettingsTableExists() {
   const { error } = await supabase.rpc('ensure_settings_table_exists');
   if (error) {
     console.error('Error ensuring settings table exists:', error);
