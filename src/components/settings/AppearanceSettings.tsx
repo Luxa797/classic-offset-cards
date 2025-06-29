@@ -2,54 +2,53 @@ import React, { useState, useEffect } from 'react';
 import Card from '../ui/Card';
 import { useTheme } from '@/lib/ThemeProvider';
 import { Sun, Moon, Monitor, Check } from 'lucide-react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import Button from '../ui/Button';
 import toast from 'react-hot-toast';
+import { useUserSettings } from '@/lib/settingsService';
+import { Loader2 } from 'lucide-react';
 
 const AppearanceSettings: React.FC = () => {
   const { theme, setTheme } = useTheme();
-  const [fontSize, setFontSize] = useLocalStorage('fontSize', 'medium');
-  const [reducedMotion, setReducedMotion] = useLocalStorage('reducedMotion', false);
-  const [highContrast, setHighContrast] = useLocalStorage('highContrast', false);
-  const [colorScheme, setColorScheme] = useLocalStorage('colorScheme', 'blue');
+  const { settings, updateSettings, loading } = useUserSettings();
   
-  const handleSaveAppearance = () => {
-    // Apply font size
-    document.documentElement.style.fontSize = 
-      fontSize === 'small' ? '14px' : 
-      fontSize === 'large' ? '18px' : '16px';
-    
-    // Apply reduced motion
-    if (reducedMotion) {
-      document.documentElement.classList.add('reduce-motion');
-    } else {
-      document.documentElement.classList.remove('reduce-motion');
+  const [localSettings, setLocalSettings] = useState({
+    fontSize: 'medium',
+    reducedMotion: false,
+    highContrast: false,
+    colorScheme: 'blue',
+  });
+  
+  // Sync local state with settings from Supabase
+  useEffect(() => {
+    if (settings) {
+      setLocalSettings({
+        fontSize: settings.font_size,
+        reducedMotion: settings.reduced_motion,
+        highContrast: settings.high_contrast,
+        colorScheme: settings.color_scheme,
+      });
     }
-    
-    // Apply high contrast
-    if (highContrast) {
-      document.documentElement.classList.add('high-contrast');
-    } else {
-      document.documentElement.classList.remove('high-contrast');
-    }
-    
-    toast.success('Appearance settings saved');
+  }, [settings]);
+  
+  const handleSaveAppearance = async () => {
+    await updateSettings({
+      theme_preference: theme,
+      font_size: localSettings.fontSize as 'small' | 'medium' | 'large',
+      reduced_motion: localSettings.reducedMotion,
+      high_contrast: localSettings.highContrast,
+      color_scheme: localSettings.colorScheme,
+    });
   };
 
-  // Apply settings on initial load
-  useEffect(() => {
-    document.documentElement.style.fontSize = 
-      fontSize === 'small' ? '14px' : 
-      fontSize === 'large' ? '18px' : '16px';
-    
-    if (reducedMotion) {
-      document.documentElement.classList.add('reduce-motion');
-    }
-    
-    if (highContrast) {
-      document.documentElement.classList.add('high-contrast');
-    }
-  }, [fontSize, reducedMotion, highContrast]);
+  if (loading) {
+    return (
+      <Card className="p-6">
+        <div className="flex justify-center items-center h-40">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-6">
@@ -118,32 +117,32 @@ const AppearanceSettings: React.FC = () => {
           <h3 className="text-lg font-medium mb-4">Font Size</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div 
-              className={`p-4 border rounded-lg cursor-pointer transition-all ${fontSize === 'small' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
-              onClick={() => setFontSize('small')}
+              className={`p-4 border rounded-lg cursor-pointer transition-all ${localSettings.fontSize === 'small' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+              onClick={() => setLocalSettings({...localSettings, fontSize: 'small'})}
             >
               <div className="flex justify-between items-center">
                 <h4 className="font-medium text-sm">Small</h4>
-                {fontSize === 'small' && <Check className="h-4 w-4 text-primary" />}
+                {localSettings.fontSize === 'small' && <Check className="h-4 w-4 text-primary" />}
               </div>
             </div>
             
             <div 
-              className={`p-4 border rounded-lg cursor-pointer transition-all ${fontSize === 'medium' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
-              onClick={() => setFontSize('medium')}
+              className={`p-4 border rounded-lg cursor-pointer transition-all ${localSettings.fontSize === 'medium' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+              onClick={() => setLocalSettings({...localSettings, fontSize: 'medium'})}
             >
               <div className="flex justify-between items-center">
                 <h4 className="font-medium">Medium</h4>
-                {fontSize === 'medium' && <Check className="h-4 w-4 text-primary" />}
+                {localSettings.fontSize === 'medium' && <Check className="h-4 w-4 text-primary" />}
               </div>
             </div>
             
             <div 
-              className={`p-4 border rounded-lg cursor-pointer transition-all ${fontSize === 'large' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
-              onClick={() => setFontSize('large')}
+              className={`p-4 border rounded-lg cursor-pointer transition-all ${localSettings.fontSize === 'large' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+              onClick={() => setLocalSettings({...localSettings, fontSize: 'large'})}
             >
               <div className="flex justify-between items-center">
                 <h4 className="font-medium text-lg">Large</h4>
-                {fontSize === 'large' && <Check className="h-4 w-4 text-primary" />}
+                {localSettings.fontSize === 'large' && <Check className="h-4 w-4 text-primary" />}
               </div>
             </div>
           </div>
@@ -162,8 +161,8 @@ const AppearanceSettings: React.FC = () => {
                 <input 
                   type="checkbox" 
                   className="sr-only peer" 
-                  checked={reducedMotion}
-                  onChange={() => setReducedMotion(!reducedMotion)}
+                  checked={localSettings.reducedMotion}
+                  onChange={() => setLocalSettings({...localSettings, reducedMotion: !localSettings.reducedMotion})}
                 />
                 <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
@@ -178,8 +177,8 @@ const AppearanceSettings: React.FC = () => {
                 <input 
                   type="checkbox" 
                   className="sr-only peer" 
-                  checked={highContrast}
-                  onChange={() => setHighContrast(!highContrast)}
+                  checked={localSettings.highContrast}
+                  onChange={() => setLocalSettings({...localSettings, highContrast: !localSettings.highContrast})}
                 />
                 <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
@@ -194,12 +193,12 @@ const AppearanceSettings: React.FC = () => {
             {['blue', 'green', 'purple', 'orange', 'pink', 'teal', 'red', 'gray'].map((color) => (
               <div 
                 key={color}
-                className={`p-4 border rounded-lg cursor-pointer transition-all ${colorScheme === color ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
-                onClick={() => setColorScheme(color)}
+                className={`p-4 border rounded-lg cursor-pointer transition-all ${localSettings.colorScheme === color ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                onClick={() => setLocalSettings({...localSettings, colorScheme: color})}
               >
                 <div className="flex justify-between items-center mb-2">
                   <h4 className="font-medium capitalize">{color}</h4>
-                  {colorScheme === color && <Check className="h-4 w-4 text-primary" />}
+                  {localSettings.colorScheme === color && <Check className="h-4 w-4 text-primary" />}
                 </div>
                 <div className={`h-6 rounded-md bg-${color}-500`}></div>
               </div>

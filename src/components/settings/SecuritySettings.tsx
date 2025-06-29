@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
@@ -7,9 +7,11 @@ import { useUser } from '@/context/UserContext';
 import { Loader2, Lock, Key, Shield, Eye, EyeOff, LogOut } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { useUserSettings } from '@/lib/settingsService';
 
 const SecuritySettings: React.FC = () => {
   const { user } = useUser();
+  const { settings, updateSettings, loading: settingsLoading } = useUserSettings();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +25,13 @@ const SecuritySettings: React.FC = () => {
     { id: 1, device: 'Chrome on Windows', location: 'Chennai, India', lastActive: '2 hours ago', current: true },
     { id: 2, device: 'Safari on iPhone', location: 'Chennai, India', lastActive: '2 days ago', current: false },
   ]);
+  
+  // Sync with Supabase settings
+  useEffect(() => {
+    if (settings) {
+      setTwoFactorEnabled(settings.security_preferences.two_factor_enabled);
+    }
+  }, [settings]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -86,6 +95,30 @@ const SecuritySettings: React.FC = () => {
     setSessionHistory(prev => prev.filter(session => session.id !== sessionId));
     toast.success('Session terminated');
   };
+  
+  const handleToggleTwoFactor = async () => {
+    try {
+      await updateSettings({
+        security_preferences: {
+          two_factor_enabled: !twoFactorEnabled,
+          login_notifications: settings?.security_preferences.login_notifications || true
+        }
+      });
+      setTwoFactorEnabled(!twoFactorEnabled);
+    } catch (error) {
+      console.error('Error toggling 2FA:', error);
+    }
+  };
+
+  if (settingsLoading) {
+    return (
+      <Card className="p-6">
+        <div className="flex justify-center items-center h-40">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-6">
@@ -172,7 +205,7 @@ const SecuritySettings: React.FC = () => {
                   type="checkbox" 
                   className="sr-only peer" 
                   checked={twoFactorEnabled}
-                  onChange={() => setTwoFactorEnabled(!twoFactorEnabled)}
+                  onChange={handleToggleTwoFactor}
                 />
                 <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>

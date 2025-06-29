@@ -1,46 +1,84 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../ui/Card';
-import { supabase } from '@/lib/supabaseClient';
 import { useUser } from '@/context/UserContext';
-import { Bell, Mail, MessageSquare, AlertCircle, Clock } from 'lucide-react';
+import { Bell, Mail, MessageSquare, AlertCircle, Clock, ShoppingBag, DollarSign } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useUserSettings } from '@/lib/settingsService';
+import { Loader2 } from 'lucide-react';
+import Button from '../ui/Button';
 
 const NotificationSettings: React.FC = () => {
   const { user } = useUser();
-  const [loading, setLoading] = useState(false);
+  const { settings, updateSettings, loading } = useUserSettings();
+  const [saving, setSaving] = useState(false);
   
-  // Use local storage for notification preferences
-  const [emailNotifications, setEmailNotifications] = useLocalStorage('emailNotifications', true);
-  const [pushNotifications, setPushNotifications] = useLocalStorage('pushNotifications', true);
-  const [smsNotifications, setSmsNotifications] = useLocalStorage('smsNotifications', false);
-  const [whatsappNotifications, setWhatsappNotifications] = useLocalStorage('whatsappNotifications', false);
+  // Local state for notification preferences
+  const [localSettings, setLocalSettings] = useState({
+    emailNotifications: true,
+    pushNotifications: true,
+    smsNotifications: false,
+    whatsappNotifications: false,
+    orderUpdates: true,
+    paymentAlerts: true,
+    stockAlerts: true,
+    systemAnnouncements: true,
+    notificationFrequency: 'realtime' as 'realtime' | 'daily' | 'weekly',
+  });
   
-  // Notification types
-  const [orderUpdates, setOrderUpdates] = useLocalStorage('orderUpdates', true);
-  const [paymentAlerts, setPaymentAlerts] = useLocalStorage('paymentAlerts', true);
-  const [stockAlerts, setStockAlerts] = useLocalStorage('stockAlerts', true);
-  const [systemAnnouncements, setSystemAnnouncements] = useLocalStorage('systemAnnouncements', true);
-  
-  // Notification frequency
-  const [notificationFrequency, setNotificationFrequency] = useLocalStorage('notificationFrequency', 'realtime');
+  // Sync local state with settings from Supabase
+  useEffect(() => {
+    if (settings) {
+      setLocalSettings({
+        emailNotifications: settings.notification_preferences.email,
+        pushNotifications: settings.notification_preferences.push,
+        smsNotifications: settings.notification_preferences.sms,
+        whatsappNotifications: settings.notification_preferences.whatsapp,
+        orderUpdates: settings.notification_preferences.types.orders,
+        paymentAlerts: settings.notification_preferences.types.payments,
+        stockAlerts: settings.notification_preferences.types.stock,
+        systemAnnouncements: settings.notification_preferences.types.system,
+        notificationFrequency: settings.notification_preferences.frequency,
+      });
+    }
+  }, [settings]);
 
   const saveNotificationSettings = async () => {
     if (!user) return;
     
-    setLoading(true);
+    setSaving(true);
     try {
-      // In a real app, you would save these to the database
-      // For now, we're just using localStorage and showing a success message
-      
-      toast.success('Notification preferences saved');
+      await updateSettings({
+        notification_preferences: {
+          email: localSettings.emailNotifications,
+          push: localSettings.pushNotifications,
+          sms: localSettings.smsNotifications,
+          whatsapp: localSettings.whatsappNotifications,
+          frequency: localSettings.notificationFrequency,
+          types: {
+            orders: localSettings.orderUpdates,
+            payments: localSettings.paymentAlerts,
+            stock: localSettings.stockAlerts,
+            system: localSettings.systemAnnouncements,
+          }
+        }
+      });
     } catch (error: any) {
       console.error('Error saving notification settings:', error);
       toast.error(error.message || 'Failed to save notification settings');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <Card className="p-6">
+        <div className="flex justify-center items-center h-40">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-6">
@@ -66,8 +104,8 @@ const NotificationSettings: React.FC = () => {
                 <input 
                   type="checkbox" 
                   className="sr-only peer" 
-                  checked={emailNotifications}
-                  onChange={() => setEmailNotifications(!emailNotifications)}
+                  checked={localSettings.emailNotifications}
+                  onChange={() => setLocalSettings({...localSettings, emailNotifications: !localSettings.emailNotifications})}
                 />
                 <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
@@ -85,8 +123,8 @@ const NotificationSettings: React.FC = () => {
                 <input 
                   type="checkbox" 
                   className="sr-only peer" 
-                  checked={pushNotifications}
-                  onChange={() => setPushNotifications(!pushNotifications)}
+                  checked={localSettings.pushNotifications}
+                  onChange={() => setLocalSettings({...localSettings, pushNotifications: !localSettings.pushNotifications})}
                 />
                 <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
@@ -104,8 +142,8 @@ const NotificationSettings: React.FC = () => {
                 <input 
                   type="checkbox" 
                   className="sr-only peer" 
-                  checked={smsNotifications}
-                  onChange={() => setSmsNotifications(!smsNotifications)}
+                  checked={localSettings.smsNotifications}
+                  onChange={() => setLocalSettings({...localSettings, smsNotifications: !localSettings.smsNotifications})}
                 />
                 <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
@@ -123,8 +161,8 @@ const NotificationSettings: React.FC = () => {
                 <input 
                   type="checkbox" 
                   className="sr-only peer" 
-                  checked={whatsappNotifications}
-                  onChange={() => setWhatsappNotifications(!whatsappNotifications)}
+                  checked={localSettings.whatsappNotifications}
+                  onChange={() => setLocalSettings({...localSettings, whatsappNotifications: !localSettings.whatsappNotifications})}
                 />
                 <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
@@ -148,8 +186,8 @@ const NotificationSettings: React.FC = () => {
                 <input 
                   type="checkbox" 
                   className="sr-only peer" 
-                  checked={orderUpdates}
-                  onChange={() => setOrderUpdates(!orderUpdates)}
+                  checked={localSettings.orderUpdates}
+                  onChange={() => setLocalSettings({...localSettings, orderUpdates: !localSettings.orderUpdates})}
                 />
                 <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
@@ -167,8 +205,8 @@ const NotificationSettings: React.FC = () => {
                 <input 
                   type="checkbox" 
                   className="sr-only peer" 
-                  checked={paymentAlerts}
-                  onChange={() => setPaymentAlerts(!paymentAlerts)}
+                  checked={localSettings.paymentAlerts}
+                  onChange={() => setLocalSettings({...localSettings, paymentAlerts: !localSettings.paymentAlerts})}
                 />
                 <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
@@ -186,8 +224,8 @@ const NotificationSettings: React.FC = () => {
                 <input 
                   type="checkbox" 
                   className="sr-only peer" 
-                  checked={stockAlerts}
-                  onChange={() => setStockAlerts(!stockAlerts)}
+                  checked={localSettings.stockAlerts}
+                  onChange={() => setLocalSettings({...localSettings, stockAlerts: !localSettings.stockAlerts})}
                 />
                 <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
@@ -205,8 +243,8 @@ const NotificationSettings: React.FC = () => {
                 <input 
                   type="checkbox" 
                   className="sr-only peer" 
-                  checked={systemAnnouncements}
-                  onChange={() => setSystemAnnouncements(!systemAnnouncements)}
+                  checked={localSettings.systemAnnouncements}
+                  onChange={() => setLocalSettings({...localSettings, systemAnnouncements: !localSettings.systemAnnouncements})}
                 />
                 <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
@@ -226,34 +264,34 @@ const NotificationSettings: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
             <div 
-              className={`p-4 border rounded-lg cursor-pointer transition-all ${notificationFrequency === 'realtime' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
-              onClick={() => setNotificationFrequency('realtime')}
+              className={`p-4 border rounded-lg cursor-pointer transition-all ${localSettings.notificationFrequency === 'realtime' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+              onClick={() => setLocalSettings({...localSettings, notificationFrequency: 'realtime'})}
             >
               <div className="flex justify-between items-center mb-2">
                 <h4 className="font-medium">Real-time</h4>
-                <div className={`w-4 h-4 rounded-full ${notificationFrequency === 'realtime' ? 'bg-primary' : 'border border-muted-foreground'}`}></div>
+                <div className={`w-4 h-4 rounded-full ${localSettings.notificationFrequency === 'realtime' ? 'bg-primary' : 'border border-muted-foreground'}`}></div>
               </div>
               <p className="text-sm text-muted-foreground">Receive notifications as events happen</p>
             </div>
             
             <div 
-              className={`p-4 border rounded-lg cursor-pointer transition-all ${notificationFrequency === 'daily' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
-              onClick={() => setNotificationFrequency('daily')}
+              className={`p-4 border rounded-lg cursor-pointer transition-all ${localSettings.notificationFrequency === 'daily' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+              onClick={() => setLocalSettings({...localSettings, notificationFrequency: 'daily'})}
             >
               <div className="flex justify-between items-center mb-2">
                 <h4 className="font-medium">Daily Digest</h4>
-                <div className={`w-4 h-4 rounded-full ${notificationFrequency === 'daily' ? 'bg-primary' : 'border border-muted-foreground'}`}></div>
+                <div className={`w-4 h-4 rounded-full ${localSettings.notificationFrequency === 'daily' ? 'bg-primary' : 'border border-muted-foreground'}`}></div>
               </div>
               <p className="text-sm text-muted-foreground">Receive a daily summary of all notifications</p>
             </div>
             
             <div 
-              className={`p-4 border rounded-lg cursor-pointer transition-all ${notificationFrequency === 'weekly' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
-              onClick={() => setNotificationFrequency('weekly')}
+              className={`p-4 border rounded-lg cursor-pointer transition-all ${localSettings.notificationFrequency === 'weekly' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+              onClick={() => setLocalSettings({...localSettings, notificationFrequency: 'weekly'})}
             >
               <div className="flex justify-between items-center mb-2">
                 <h4 className="font-medium">Weekly Digest</h4>
-                <div className={`w-4 h-4 rounded-full ${notificationFrequency === 'weekly' ? 'bg-primary' : 'border border-muted-foreground'}`}></div>
+                <div className={`w-4 h-4 rounded-full ${localSettings.notificationFrequency === 'weekly' ? 'bg-primary' : 'border border-muted-foreground'}`}></div>
               </div>
               <p className="text-sm text-muted-foreground">Receive a weekly summary of all notifications</p>
             </div>
@@ -261,8 +299,8 @@ const NotificationSettings: React.FC = () => {
         </div>
         
         <div className="flex justify-end">
-          <Button onClick={saveNotificationSettings} disabled={loading}>
-            {loading ? (
+          <Button onClick={saveNotificationSettings} disabled={saving}>
+            {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...

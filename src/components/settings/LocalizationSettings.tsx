@@ -1,17 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { Globe, Loader2, Languages } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useUserSettings } from '@/lib/settingsService';
 
 const LocalizationSettings: React.FC = () => {
-  const [loading, setLoading] = useState(false);
-  const [language, setLanguage] = useLocalStorage('language', 'en');
-  const [dateFormat, setDateFormat] = useLocalStorage('dateFormat', 'DD/MM/YYYY');
-  const [timeFormat, setTimeFormat] = useLocalStorage('timeFormat', '24h');
-  const [currency, setCurrency] = useLocalStorage('currency', 'INR');
-  const [timezone, setTimezone] = useLocalStorage('timezone', 'Asia/Kolkata');
+  const { settings, updateSettings, loading } = useUserSettings();
+  const [saving, setSaving] = useState(false);
+  
+  const [localSettings, setLocalSettings] = useState({
+    language: 'en',
+    dateFormat: 'DD/MM/YYYY',
+    timeFormat: '24h',
+    currency: 'INR',
+    timezone: 'Asia/Kolkata',
+  });
+  
+  // Sync local state with settings from Supabase
+  useEffect(() => {
+    if (settings) {
+      setLocalSettings({
+        language: settings.language_preference,
+        dateFormat: settings.date_format,
+        timeFormat: settings.time_format,
+        currency: settings.currency,
+        timezone: settings.timezone,
+      });
+    }
+  }, [settings]);
   
   const languages = [
     { code: 'en', name: 'English' },
@@ -48,15 +65,33 @@ const LocalizationSettings: React.FC = () => {
     { value: 'Asia/Singapore', label: 'Singapore (GMT+8:00)' }
   ];
 
-  const handleSaveSettings = () => {
-    setLoading(true);
+  const handleSaveSettings = async () => {
+    setSaving(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      toast.success('Localization settings saved successfully');
-      setLoading(false);
-    }, 1000);
+    try {
+      await updateSettings({
+        language_preference: localSettings.language,
+        date_format: localSettings.dateFormat,
+        time_format: localSettings.timeFormat,
+        currency: localSettings.currency,
+        timezone: localSettings.timezone,
+      });
+    } catch (error) {
+      console.error('Error saving localization settings:', error);
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <Card className="p-6">
+        <div className="flex justify-center items-center h-40">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-6">
@@ -73,8 +108,8 @@ const LocalizationSettings: React.FC = () => {
             {languages.map(lang => (
               <div 
                 key={lang.code}
-                className={`p-4 border rounded-lg cursor-pointer transition-all ${language === lang.code ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
-                onClick={() => setLanguage(lang.code)}
+                className={`p-4 border rounded-lg cursor-pointer transition-all ${localSettings.language === lang.code ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                onClick={() => setLocalSettings({...localSettings, language: lang.code})}
               >
                 <div className="flex items-center gap-2">
                   <Languages className="h-4 w-4 text-muted-foreground" />
@@ -92,8 +127,8 @@ const LocalizationSettings: React.FC = () => {
             <div>
               <label className="block text-sm font-medium mb-2">Date Format</label>
               <select
-                value={dateFormat}
-                onChange={(e) => setDateFormat(e.target.value)}
+                value={localSettings.dateFormat}
+                onChange={(e) => setLocalSettings({...localSettings, dateFormat: e.target.value})}
                 className="w-full px-3 py-2 bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 {dateFormats.map(format => (
@@ -105,8 +140,8 @@ const LocalizationSettings: React.FC = () => {
             <div>
               <label className="block text-sm font-medium mb-2">Time Format</label>
               <select
-                value={timeFormat}
-                onChange={(e) => setTimeFormat(e.target.value)}
+                value={localSettings.timeFormat}
+                onChange={(e) => setLocalSettings({...localSettings, timeFormat: e.target.value})}
                 className="w-full px-3 py-2 bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 {timeFormats.map(format => (
@@ -124,8 +159,8 @@ const LocalizationSettings: React.FC = () => {
             <div>
               <label className="block text-sm font-medium mb-2">Currency</label>
               <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
+                value={localSettings.currency}
+                onChange={(e) => setLocalSettings({...localSettings, currency: e.target.value})}
                 className="w-full px-3 py-2 bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 {currencies.map(curr => (
@@ -137,8 +172,8 @@ const LocalizationSettings: React.FC = () => {
             <div>
               <label className="block text-sm font-medium mb-2">Timezone</label>
               <select
-                value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
+                value={localSettings.timezone}
+                onChange={(e) => setLocalSettings({...localSettings, timezone: e.target.value})}
                 className="w-full px-3 py-2 bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 {timezones.map(tz => (
@@ -158,14 +193,14 @@ const LocalizationSettings: React.FC = () => {
                 <p className="text-sm font-medium mb-1">Date & Time</p>
                 <p className="text-muted-foreground">
                   {new Date().toLocaleDateString(
-                    language === 'en' ? 'en-US' : language === 'ta' ? 'ta-IN' : 'en-IN', 
+                    localSettings.language === 'en' ? 'en-US' : localSettings.language === 'ta' ? 'ta-IN' : 'en-IN', 
                     { 
                       year: 'numeric', 
-                      month: dateFormat.includes('MMM') ? 'short' : 'numeric', 
+                      month: localSettings.dateFormat.includes('MMM') ? 'short' : 'numeric', 
                       day: 'numeric',
                       hour: 'numeric',
                       minute: 'numeric',
-                      hour12: timeFormat === '12h'
+                      hour12: localSettings.timeFormat === '12h'
                     }
                   )}
                 </p>
@@ -175,10 +210,10 @@ const LocalizationSettings: React.FC = () => {
                 <p className="text-sm font-medium mb-1">Currency</p>
                 <p className="text-muted-foreground">
                   {new Intl.NumberFormat(
-                    language === 'en' ? 'en-US' : language === 'ta' ? 'ta-IN' : 'en-IN', 
+                    localSettings.language === 'en' ? 'en-US' : localSettings.language === 'ta' ? 'ta-IN' : 'en-IN', 
                     { 
                       style: 'currency', 
-                      currency: currency 
+                      currency: localSettings.currency 
                     }
                   ).format(1234.56)}
                 </p>
@@ -188,8 +223,8 @@ const LocalizationSettings: React.FC = () => {
         </div>
         
         <div className="flex justify-end">
-          <Button onClick={handleSaveSettings} disabled={loading}>
-            {loading ? (
+          <Button onClick={handleSaveSettings} disabled={saving}>
+            {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...

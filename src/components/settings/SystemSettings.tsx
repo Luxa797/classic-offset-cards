@@ -1,53 +1,115 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import { Database, Loader2, HardDrive, Server, RefreshCw, Download, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useUserSettings } from '@/lib/settingsService';
+import { supabase } from '@/lib/supabaseClient';
+import { useUser } from '@/context/UserContext';
 
 const SystemSettings: React.FC = () => {
+  const { user } = useUser();
+  const { settings, updateSettings, loading: settingsLoading } = useUserSettings();
   const [loading, setLoading] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
   const [restoreLoading, setRestoreLoading] = useState(false);
-  const [cacheSize, setCacheSize] = useLocalStorage('cacheSize', '100');
-  const [autoBackup, setAutoBackup] = useLocalStorage('autoBackup', true);
-  const [backupFrequency, setBackupFrequency] = useLocalStorage('backupFrequency', 'weekly');
-  const [logLevel, setLogLevel] = useLocalStorage('logLevel', 'error');
-  const [analyticsEnabled, setAnalyticsEnabled] = useLocalStorage('analyticsEnabled', true);
+  
+  const [localSettings, setLocalSettings] = useState({
+    cacheSize: '100',
+    autoBackup: true,
+    backupFrequency: 'weekly',
+    logLevel: 'error',
+    analyticsEnabled: true,
+  });
+  
+  // Sync with Supabase settings
+  useEffect(() => {
+    if (settings) {
+      // Extract system settings from the settings object
+      const systemSettings = settings.system_settings || {};
+      setLocalSettings({
+        cacheSize: systemSettings.cache_size || '100',
+        autoBackup: systemSettings.auto_backup || true,
+        backupFrequency: systemSettings.backup_frequency || 'weekly',
+        logLevel: systemSettings.log_level || 'error',
+        analyticsEnabled: systemSettings.analytics_enabled || true,
+      });
+    }
+  }, [settings]);
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      toast.success('System settings saved successfully');
+    try {
+      await updateSettings({
+        system_settings: {
+          cache_size: localSettings.cacheSize,
+          auto_backup: localSettings.autoBackup,
+          backup_frequency: localSettings.backupFrequency,
+          log_level: localSettings.logLevel,
+          analytics_enabled: localSettings.analyticsEnabled,
+        }
+      });
+    } catch (error) {
+      console.error('Error saving system settings:', error);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
-  const handleClearCache = () => {
+  const handleClearCache = async () => {
     setLoading(true);
     
-    // Simulate clearing cache
-    setTimeout(() => {
+    try {
+      // In a real app, this would clear the cache
+      // For now, we'll just simulate it
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       toast.success('Cache cleared successfully');
+    } catch (error) {
+      console.error('Error clearing cache:', error);
+      toast.error('Failed to clear cache');
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
-  const handleBackup = () => {
+  const handleBackup = async () => {
+    if (!user) {
+      toast.error('You must be logged in to create a backup');
+      return;
+    }
+    
     setBackupLoading(true);
     
-    // Simulate backup process
-    setTimeout(() => {
+    try {
+      // Get the user's data from various tables
+      const [customersRes, ordersRes, paymentsRes, materialsRes, expensesRes] = await Promise.all([
+        supabase.from('customers').select('*').eq('user_id', user.id),
+        supabase.from('orders').select('*').eq('user_id', user.id),
+        supabase.from('payments').select('*').eq('created_by', user.id),
+        supabase.from('materials').select('*').eq('created_by', user.id),
+        supabase.from('expenses').select('*').eq('created_by', user.id),
+      ]);
+      
+      // Combine all data into a backup object
+      const backupData = {
+        timestamp: new Date().toISOString(),
+        user_id: user.id,
+        customers: customersRes.data || [],
+        orders: ordersRes.data || [],
+        payments: paymentsRes.data || [],
+        materials: materialsRes.data || [],
+        expenses: expensesRes.data || [],
+      };
+      
+      // Convert to JSON and create a downloadable file
+      const dataStr = JSON.stringify(backupData, null, 2);
+      const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
+      
       const date = new Date().toISOString().split('T')[0];
       const fileName = `classic_offset_backup_${date}.json`;
-      
-      // Create a dummy backup file
-      const dummyData = { timestamp: new Date().toISOString(), type: 'backup' };
-      const dataStr = JSON.stringify(dummyData);
-      const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
       
       const link = document.createElement('a');
       link.setAttribute('href', dataUri);
@@ -56,26 +118,76 @@ const SystemSettings: React.FC = () => {
       link.click();
       document.body.removeChild(link);
       
-      toast.success('Backup created successfully');
+      // Log the backup
+      await supabase.from('backup_logs').insert({
+        user_id: user.id,
+        backup_type: 'manual',
+        backup_size: dataStr.length,
+        status: 'completed',
+      });
+      
+      toast.success('Backup created successfully!');
+    } catch (error) {
+      console.error('Error creating backup:', error);
+      toast.error('Failed to create backup');
+    } finally {
       setBackupLoading(false);
-    }, 2000);
+    }
   };
 
-  const handleRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
+    if (!user) {
+      toast.error('You must be logged in to restore data');
+      return;
+    }
+    
     setRestoreLoading(true);
     
-    // Simulate restore process
-    setTimeout(() => {
+    try {
+      const fileContent = await file.text();
+      const backupData = JSON.parse(fileContent);
+      
+      // Validate the backup data
+      if (!backupData.timestamp || !backupData.user_id) {
+        throw new Error('Invalid backup file format');
+      }
+      
+      // In a real app, you would restore the data to the database
+      // For now, we'll just simulate it
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Log the restore
+      await supabase.from('backup_logs').insert({
+        user_id: user.id,
+        backup_type: 'restore',
+        backup_size: fileContent.length,
+        status: 'completed',
+      });
+      
       toast.success(`Restored from ${file.name}`);
+    } catch (error) {
+      console.error('Error restoring backup:', error);
+      toast.error('Failed to restore from backup');
+    } finally {
       setRestoreLoading(false);
       
       // Reset the file input
       e.target.value = '';
-    }, 2000);
+    }
   };
+
+  if (settingsLoading) {
+    return (
+      <Card className="p-6">
+        <div className="flex justify-center items-center h-40">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-6">
@@ -94,8 +206,8 @@ const SystemSettings: React.FC = () => {
                 id="cacheSize"
                 label="Cache Size (MB)"
                 type="number"
-                value={cacheSize}
-                onChange={(e) => setCacheSize(e.target.value)}
+                value={localSettings.cacheSize}
+                onChange={(e) => setLocalSettings({...localSettings, cacheSize: e.target.value})}
                 icon={<HardDrive className="h-4 w-4" />}
               />
               <p className="text-xs text-muted-foreground mt-1">
@@ -130,19 +242,19 @@ const SystemSettings: React.FC = () => {
                 <input 
                   type="checkbox" 
                   className="sr-only peer" 
-                  checked={autoBackup}
-                  onChange={() => setAutoBackup(!autoBackup)}
+                  checked={localSettings.autoBackup}
+                  onChange={() => setLocalSettings({...localSettings, autoBackup: !localSettings.autoBackup})}
                 />
                 <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
             
-            {autoBackup && (
+            {localSettings.autoBackup && (
               <div className="ml-6">
                 <label className="block text-sm font-medium mb-1">Backup Frequency</label>
                 <select
-                  value={backupFrequency}
-                  onChange={(e) => setBackupFrequency(e.target.value)}
+                  value={localSettings.backupFrequency}
+                  onChange={(e) => setLocalSettings({...localSettings, backupFrequency: e.target.value})}
                   className="w-full px-3 py-2 bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="daily">Daily</option>
@@ -193,8 +305,8 @@ const SystemSettings: React.FC = () => {
             <div>
               <label className="block text-sm font-medium mb-1">Log Level</label>
               <select
-                value={logLevel}
-                onChange={(e) => setLogLevel(e.target.value)}
+                value={localSettings.logLevel}
+                onChange={(e) => setLocalSettings({...localSettings, logLevel: e.target.value})}
                 className="w-full px-3 py-2 bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="error">Error Only</option>
@@ -216,8 +328,8 @@ const SystemSettings: React.FC = () => {
                 <input 
                   type="checkbox" 
                   className="sr-only peer" 
-                  checked={analyticsEnabled}
-                  onChange={() => setAnalyticsEnabled(!analyticsEnabled)}
+                  checked={localSettings.analyticsEnabled}
+                  onChange={() => setLocalSettings({...localSettings, analyticsEnabled: !localSettings.analyticsEnabled})}
                 />
                 <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>

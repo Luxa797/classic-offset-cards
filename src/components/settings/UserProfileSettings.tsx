@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 const UserProfileSettings: React.FC = () => {
   const { user, userProfile } = useUser();
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -42,7 +43,7 @@ const UserProfileSettings: React.FC = () => {
     e.preventDefault();
     if (!user) return;
 
-    setLoading(true);
+    setSaving(true);
     try {
       const { error } = await supabase
         .from('users')
@@ -57,13 +58,32 @@ const UserProfileSettings: React.FC = () => {
 
       if (error) throw error;
       toast.success('Profile updated successfully');
+      
+      // Update the profile in any other relevant tables
+      await supabase.rpc('sync_user_profile', {
+        user_id: user.id,
+        user_name: formData.name,
+        user_phone: formData.phone || null,
+        user_address: formData.address || null
+      });
+      
     } catch (error: any) {
       console.error('Error updating profile:', error);
       toast.error(error.message || 'Failed to update profile');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <Card className="p-6">
+        <div className="flex justify-center items-center h-40">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-6">
@@ -123,8 +143,8 @@ const UserProfileSettings: React.FC = () => {
         />
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={loading}>
-            {loading ? (
+          <Button type="submit" disabled={saving}>
+            {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
