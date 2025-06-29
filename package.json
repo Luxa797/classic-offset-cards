@@ -19,7 +19,6 @@
     "dayjs": "^1.11.13",
     "firebase": "^11.9.1",
     "framer-motion": "^11.0.3",
-    "jspdf": "^3.0.1",
     "jspdf-autotable": "^3.8.2",
     "lucide-react": "^0.344.0",
     "phosphor-react": "^1.4.1",
