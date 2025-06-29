@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card } from '../ui/Card';
+import Card from '../ui/Card';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import { Database, Loader2, HardDrive, Server, RefreshCw, Download, Upload } from 'lucide-react';

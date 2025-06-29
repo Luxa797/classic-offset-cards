@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '../ui/Card';
+import Card from '../ui/Card';
 import { supabase } from '@/lib/supabaseClient';
 import { useUser } from '@/context/UserContext';
 import { Bell, Mail, MessageSquare, AlertCircle, Clock } from 'lucide-react';
