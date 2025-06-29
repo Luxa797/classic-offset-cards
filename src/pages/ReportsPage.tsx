@@ -569,11 +569,11 @@ const ReportsPage: React.FC = () => {
         return <div className="text-center p-6 text-muted-foreground">Use the filters and click "Search Invoices" to begin.</div>;
     }
     
-    // Render for other reports
-    if (reportData && reportData.length > 0) {
-       return (
-            <Card className="mt-6">
-                 <div className="p-4 border-b flex justify-between items-center">
+    // Render for other reports - Always render the ref container
+    return (
+        <Card className="mt-6">
+            {reportData && reportData.length > 0 && (
+                <div className="p-4 border-b flex justify-between items-center">
                     <h3 className="font-semibold">Report Preview</h3>
                     <div className="flex gap-2">
                         <Button onClick={handlePrint} size="sm">
@@ -584,43 +584,50 @@ const ReportsPage: React.FC = () => {
                         </Button>
                     </div>
                 </div>
-                <div ref={reportTableRef} className="overflow-x-auto p-2">
-                    <div className="p-4 hidden print:block">
-                        <h1 className="text-xl font-bold mb-2">{reportOptions.find(opt => opt.value === reportType)?.label || 'Report'}</h1>
-                        {(filters.startDate || filters.endDate) && (
-                            <p className="text-sm mb-4">
-                                Period: {filters.startDate ? new Date(filters.startDate).toLocaleDateString() : 'Start'} to {filters.endDate ? new Date(filters.endDate).toLocaleDateString() : 'End'}
-                            </p>
-                        )}
-                        <div className="text-xs mb-6">
-                            <p>Classic Offset Cards</p>
-                            <p>363, bazar road, kadayanallur -62775</p>
-                            <p>Tenkasi District, Tamil Nadu</p>
+            )}
+            <div ref={reportTableRef} className="overflow-x-auto p-2">
+                {reportData && reportData.length > 0 ? (
+                    <>
+                        <div className="p-4 hidden print:block">
+                            <h1 className="text-xl font-bold mb-2">{reportOptions.find(opt => opt.value === reportType)?.label || 'Report'}</h1>
+                            {(filters.startDate || filters.endDate) && (
+                                <p className="text-sm mb-4">
+                                    Period: {filters.startDate ? new Date(filters.startDate).toLocaleDateString() : 'Start'} to {filters.endDate ? new Date(filters.endDate).toLocaleDateString() : 'End'}
+                                </p>
+                            )}
+                            <div className="text-xs mb-6">
+                                <p>Classic Offset Cards</p>
+                                <p>363, bazar road, kadayanallur -62775</p>
+                                <p>Tenkasi District, Tamil Nadu</p>
+                            </div>
                         </div>
+                        <table className="min-w-full text-sm">
+                            <thead className="bg-muted/50">
+                                <tr>{tableHeaders.map(th => <th key={th} className="px-4 py-2 text-left font-medium">{th}</th>)}</tr>
+                            </thead>
+                            <tbody className="bg-card divide-y divide-border">
+                                {reportData.map((row, i) => (
+                                    <tr key={i} className="hover:bg-muted/20">
+                                      {Array.isArray(row) 
+                                        ? row.map((td: any, j) => <td key={j} className="px-4 py-2">{td}</td>)
+                                        : Object.values(row).map((td: any, j) => <td key={j} className="px-4 py-2">{String(td)}</td>)
+                                      }
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        <div className="p-4 text-xs text-right hidden print:block">
+                            Generated on {new Date().toLocaleString()}
+                        </div>
+                    </>
+                ) : (
+                    <div className="p-8 text-center text-muted-foreground">
+                        No data available to display
                     </div>
-                    <table className="min-w-full text-sm">
-                        <thead className="bg-muted/50">
-                            <tr>{tableHeaders.map(th => <th key={th} className="px-4 py-2 text-left font-medium">{th}</th>)}</tr>
-                        </thead>
-                        <tbody className="bg-card divide-y divide-border">
-                            {reportData.map((row, i) => (
-                                <tr key={i} className="hover:bg-muted/20">
-                                  {Array.isArray(row) 
-                                    ? row.map((td: any, j) => <td key={j} className="px-4 py-2">{td}</td>)
-                                    : Object.values(row).map((td: any, j) => <td key={j} className="px-4 py-2">{String(td)}</td>)
-                                  }
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    <div className="p-4 text-xs text-right hidden print:block">
-                        Generated on {new Date().toLocaleString()}
-                    </div>
-                </div>
-            </Card>
-       );
-    }
-    return null;
+                )}
+            </div>
+        </Card>
+    );
   }
 
   return (
